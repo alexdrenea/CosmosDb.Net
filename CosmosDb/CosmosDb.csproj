@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+    <PackageVersion>0.0.1-local-prerelease</PackageVersion>
+    <Authors>AlexDrenea</Authors>
+    <Description>Wrappers for various CosmosDB operations</Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>AlexDrenea 2018</Copyright>
+    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gremlin.Net" Version="3.2.7" />
+    <PackageReference Include="Microsoft.Azure.Graphs" Version="0.3.1-preview" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CosmosDb.Domain\CosmosDb.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
