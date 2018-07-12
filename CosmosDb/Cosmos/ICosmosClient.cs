@@ -12,7 +12,11 @@ namespace CosmosDb
         Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query, bool expectGraphson = true);
 
         Task<CosmosResponse> InsertDocument<T>(T document);
+        Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
         Task<CosmosResponse> UpsertDocument<T>(T document);
+        Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
         Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey);
 
         Task<CosmosResponse> InsertGraphVertex<T>(T vertex);

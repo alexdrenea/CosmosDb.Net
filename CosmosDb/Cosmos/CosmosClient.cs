@@ -10,6 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
+using System.Collections.Concurrent;
+using System.Threading;
 
 namespace CosmosDb
 {
@@ -38,6 +41,10 @@ namespace CosmosDb
                 return new CosmosResponse { Error = e };
             }
         }
+        public Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, threads, reportingIntervalS);
+        }
 
         public async Task<CosmosResponse> UpsertDocument<T>(T document)
         {
@@ -51,6 +58,10 @@ namespace CosmosDb
             {
                 return new CosmosResponse { Error = e };
             }
+        }
+        public Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, threads, reportingIntervalS);
         }
 
         public async Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey)
@@ -238,6 +249,35 @@ namespace CosmosDb
 
         #endregion
 
+        private async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, int threads = 4, int reportingIntervalS = 10)
+        {
+            ConcurrentBag<CosmosResponse> cb = new ConcurrentBag<CosmosResponse>();
+            Timer statsTimer = null;
+            if (reportingCallback != null && reportingIntervalS != -1)
+            {
+                statsTimer = new Timer(_ =>
+                {
+                    reportingCallback?.Invoke(cb.ToArray());
+                }, null, reportingIntervalS * 1000, reportingIntervalS * 1000);
+            }
+
+            var actionBlock = new ActionBlock<T>(async (i) =>
+            {
+                var res = await execute(i);
+                cb.Add(res);
+            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threads });
+
+            foreach (var i in documents)
+            {
+                actionBlock.Post(i);
+            }
+            actionBlock.Complete();
+            await actionBlock.Completion;
+
+            statsTimer?.Dispose();
+            return cb.ToArray();
+        }
+
         private T ConvertResultTo<T>(object result)
         {
             if (typeof(T) == typeof(Object))
@@ -256,7 +296,19 @@ namespace CosmosDb
 
         public static async Task<ICosmosClient> GetCosmosClient(string connectionString, string key, string dbName, string collectionName, bool forceCreate = true, int initialRU = 400, string partitionKeyPropertyName = "PartitionKey")
         {
-            var client = new DocumentClient(new Uri(connectionString), key);
+            var client = new DocumentClient(new Uri(connectionString), key,
+               new ConnectionPolicy
+               {
+                   ConnectionMode = ConnectionMode.Direct,
+                   ConnectionProtocol = Protocol.Tcp,
+                   RequestTimeout = new TimeSpan(1, 0, 0),
+                   MaxConnectionLimit = 50,
+                   RetryOptions = new RetryOptions
+                   {
+                       MaxRetryAttemptsOnThrottledRequests = 10,
+                       MaxRetryWaitTimeInSeconds = 30
+                   }
+               });
 
             if (!forceCreate)
             {
