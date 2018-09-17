@@ -1,11 +1,4 @@
-﻿using CosmosDb.Helpers;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
 namespace CosmosDb
 {
@@ -22,5 +15,6 @@ namespace CosmosDb
 
         public T Result { get; set; }
         public double RU { get; set; }
+        public int ExecutionTimeMs { get; set; }
     }
 }

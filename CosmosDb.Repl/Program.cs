@@ -1,4 +1,4 @@
-﻿using CosmosDb.Helpers;
+﻿using CosmosDb.Domain.Helpers;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -151,13 +151,15 @@ namespace CosmosDb.Repl
                 {
                     if (!result.GetType().IsPrimitive)
                     {
-                        _lastResultSet.Add(GraphsonHelpers.GraphsonNetToFlatJObject(result));
+                        var flat = GraphsonHelpers.GraphsonNetToFlatJObject(result);
+                        _lastResultSet.Add(flat);
+                        Console.WriteLine(flat.ToString());
                     }
                     Console.WriteLine(result.ToString());
                 }
 
                 sw.Stop();
-                Console.WriteLine($"Total request charge: {queryResult.RU}. Executed in {(sw.ElapsedMilliseconds / 1000.0).ToString("#.###")}s");
+                Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
             }
             catch (Exception e)
             {
@@ -184,7 +186,7 @@ namespace CosmosDb.Repl
                 _lastResultSet = new List<JObject>();
                 foreach (var result in queryResult.Result)
                 {
-                    if (!result.GetType().IsPrimitive)
+                    if (!result.GetType().IsPrimitive && result.GetType() != typeof(string))
                     {
                         _lastResultSet.Add(GraphsonHelpers.GraphsonToFlatJObject(result));
                     }
@@ -192,7 +194,7 @@ namespace CosmosDb.Repl
                 }
 
                 sw.Stop();
-                Console.WriteLine($"Total request charge: {queryResult.RU}. Executed in {(sw.ElapsedMilliseconds / 1000.0).ToString("#.###")}s");
+                Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
             }
             catch (Exception e)
             {

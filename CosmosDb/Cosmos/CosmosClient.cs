@@ -1,18 +1,17 @@
 ﻿using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
-using Microsoft.Azure.Documents.Linq;
 using Microsoft.Azure.Graphs;
-using CosmosDb.Helpers;
+using CosmosDb.Domain.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Threading;
+using CosmosDb.Domain;
 
 namespace CosmosDb
 {
@@ -32,9 +31,10 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 ResourceResponse<Document> response = await _client.CreateDocumentAsync(_collection.AltLink, document);
-
-                return new CosmosResponse { Result = response.Resource, RU = response.RequestCharge };
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+                return new CosmosResponse { Result = response.Resource, RU = response.RequestCharge, ExecutionTimeMs = duration };
             }
             catch (Exception e)
             {
@@ -50,9 +50,11 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 ResourceResponse<Document> response = await _client.UpsertDocumentAsync(_collection.AltLink, document);
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
 
-                return new CosmosResponse { Result = response.Resource, RU = response.RequestCharge };
+                return new CosmosResponse { Result = response.Resource, RU = response.RequestCharge, ExecutionTimeMs = duration };
             }
             catch (Exception e)
             {
@@ -84,10 +86,20 @@ namespace CosmosDb
         {
             return InsertDocument(vertex.ToGraphVertex());
         }
+        public Task<IEnumerable<CosmosResponse>> InsertGraphVertex<T>(IEnumerable<T> vertices, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            var documents = vertices.Select(v => v.ToGraphVertex());
+            return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, threads, reportingIntervalS);
+        }
 
         public Task<CosmosResponse> UpsertGraphVertex<T>(T vertex)
         {
             return UpsertDocument(vertex.ToGraphVertex());
+        }
+        public Task<IEnumerable<CosmosResponse>> UpsertGraphVertex<T>(IEnumerable<T> vertices, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            var documents = vertices.Select(v => v.ToGraphVertex());
+            return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, threads, reportingIntervalS);
         }
 
         public async Task<CosmosResponse<T>> ReadGraphVertex<T>(string docId, string partitionKey)
@@ -104,9 +116,18 @@ namespace CosmosDb
             return InsertDocument(edge.ToGraphEdge(source, target));
         }
 
-        public Task<CosmosResponse> UpsertGraphEdge<T, U, V>(T edge, U source, V target)
+        public Task<CosmosResponse> UpsertGraphEdge<T, U, V>(T edge, U source, V target, bool single = false)
         {
-            return UpsertDocument(edge.ToGraphEdge(source, target));
+            return UpsertDocument(edge.ToGraphEdge(source, target, single));
+        }
+
+        public Task<CosmosResponse> InsertGraphEdge<T>(T edge, GraphItemBase source, GraphItemBase target)
+        {
+            return InsertDocument(edge.ToGraphEdge(source, target));
+        }
+        public Task<CosmosResponse> UpsertGraphEdge<T>(T edge, GraphItemBase source, GraphItemBase target, bool single = false)
+        {
+            return UpsertDocument(edge.ToGraphEdge(source, target, single));
         }
 
         #endregion
@@ -118,12 +139,15 @@ namespace CosmosDb
             try
             {
                 //not sure why can't do CreateDocumentQuery<JObject> directly -> throws errors when trying to serialize to T
+                var start = DateTime.Now;
                 var queryRes = _client.CreateDocumentQuery(_collection.AltLink, query, new FeedOptions { EnableCrossPartitionQuery = true });
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+
                 var queryResArray = queryRes.ToArray();
 
                 var res = expectGraphson ? queryResArray.Select(q => GraphsonHelpers.FromDocument<T>(JsonConvert.DeserializeObject<JObject>(q.ToString()))) : queryResArray.Select(q => JsonConvert.DeserializeObject<T>(q.ToString()));
 
-                return new CosmosResponse<IEnumerable<T>>() { Result = res.Cast<T>().ToArray() };
+                return new CosmosResponse<IEnumerable<T>>() { Result = res.Cast<T>().ToArray(), ExecutionTimeMs = duration };
             }
             catch (Exception e)
             {
@@ -139,10 +163,13 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 var query = _client.CreateGremlinQuery<dynamic>(_collection, queryString);
                 var feedResponse = await query.ExecuteNextAsync();
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
                 var result = feedResponse.FirstOrDefault();
-                return new CosmosResponse { Result = result, RU = feedResponse.RequestCharge };
+
+                return new CosmosResponse { Result = result, RU = feedResponse.RequestCharge, ExecutionTimeMs = duration };
             }
             catch (Exception e)
             {
@@ -154,10 +181,13 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 var query = _client.CreateGremlinQuery<dynamic>(_collection, queryString);
                 var feedResponse = await query.ExecuteNextAsync();
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+
                 var result = feedResponse.Select(r => (T)ConvertResultTo<T>(r)).FirstOrDefault();
-                return new CosmosResponse<T> { Result = result, RU = feedResponse.RequestCharge };
+                return new CosmosResponse<T> { Result = result, RU = feedResponse.RequestCharge, ExecutionTimeMs = duration };
             }
             catch (Exception e)
             {
@@ -167,6 +197,7 @@ namespace CosmosDb
 
         public async Task<CosmosResponse<IEnumerable<T>>> ExecuteGremlingMulti<T>(string queryString)
         {
+            var start = DateTime.Now;
             var query = _client.CreateGremlinQuery<dynamic>(_collection, queryString);
             var data = new List<T>();
             var RUs = 0.0;
@@ -177,8 +208,9 @@ namespace CosmosDb
                 data.AddRange(feedResponse.Select(dr => (T)ConvertResultTo<T>(dr)));
                 RUs += feedResponse.RequestCharge;
             }
+            var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
 
-            return new CosmosResponse<IEnumerable<T>> { Result = data, RU = RUs };
+            return new CosmosResponse<IEnumerable<T>> { Result = data, RU = RUs, ExecutionTimeMs = duration };
         }
 
         #endregion
@@ -208,12 +240,14 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 var udfFeedUri = $"{UriFactory.CreateDocumentCollectionUri(_databaseName, _collection.Id)}/udfs";
                 var udfs = await _client.ReadUserDefinedFunctionFeedAsync(udfFeedUri);
                 var existingUDF = udfs.FirstOrDefault(a => a.Id == id);
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
                 if (existingUDF != null)
                 {
-                    return new CosmosResponse() { Result = new string[] { existingUDF.Id, existingUDF.Body }, RU = udfs.RequestCharge };
+                    return new CosmosResponse() { Result = new string[] { existingUDF.Id, existingUDF.Body }, RU = udfs.RequestCharge, ExecutionTimeMs = duration };
                 }
                 else
                 {
@@ -223,7 +257,7 @@ namespace CosmosDb
                         Body = body,
                     };
                     var createdUdf = await _client.CreateUserDefinedFunctionAsync(_collection.AltLink, udf);
-                    return new CosmosResponse() { Result = new string[] { createdUdf.Resource.Id, createdUdf.Resource.Body }, RU = createdUdf.RequestCharge };
+                    return new CosmosResponse() { Result = new string[] { createdUdf.Resource.Id, createdUdf.Resource.Body }, RU = createdUdf.RequestCharge, ExecutionTimeMs = duration };
                 }
             }
             catch (Exception ex)
@@ -237,9 +271,12 @@ namespace CosmosDb
         {
             try
             {
+                var start = DateTime.Now;
                 var funcLink = UriFactory.CreateUserDefinedFunctionUri(_databaseName, _collection.Id, id);
                 var deletedUdf = await _client.DeleteUserDefinedFunctionAsync(funcLink);
-                return new CosmosResponse() { Result = true, RU = deletedUdf.RequestCharge };
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+
+                return new CosmosResponse() { Result = true, RU = deletedUdf.RequestCharge, ExecutionTimeMs = duration };
             }
             catch (Exception ex)
             {

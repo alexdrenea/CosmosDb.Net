@@ -1,15 +1,12 @@
-﻿using CosmosDb;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace CosmosDb.Helpers
+namespace CosmosDb.Domain.Helpers
 {
     public static class GraphsonHelpers
     {
@@ -51,13 +48,13 @@ namespace CosmosDb.Helpers
         }
 
 
-        public static dynamic ToGraphEdge<T, U, V>(this T entity, U source, V target)
+        public static dynamic ToGraphEdge<T, U, V>(this T entity, U source, V target, bool single = false)
         {
             dynamic res = new ExpandoObject();
 
             var sourceProps = GetBaseProps(source, expandAllProps: false);
             var targetProps = GetBaseProps(target, expandAllProps: false);
-            var entityProps = GetBaseProps(entity, allowEmptyPartitionKey: true);
+            var entityProps = GetBaseProps(entity, allowEmptyPartitionKey: true, defaultId: single ? $"{sourceProps["/Id"].ToString()}-{targetProps["/Id"].ToString()}" : null);
 
             res.id = entityProps["/Id"].ToString();
             res.label = entityProps["/Label"].ToString();
@@ -70,6 +67,33 @@ namespace CosmosDb.Helpers
             res._sink = targetProps["/Id"].ToString();
             res._sinkLabel = targetProps["/Label"].ToString();
             res._sinkPartition = targetProps["/PartitionKey"].ToString();
+
+            var propsDic = res as IDictionary<string, object>;
+            foreach (var prop in entityProps.Where(p => !p.Key.StartsWith("/") && !_illegalEdgePropertyNames.Contains(p.Key) && p.Key != _partitionKeyPropertyName))
+            {
+                propsDic[prop.Key] = prop.Value;
+            }
+
+            return res;
+        }
+
+
+        public static dynamic ToGraphEdge<T>(this T entity, GraphItemBase source, GraphItemBase target, bool single = false)
+        {
+            dynamic res = new ExpandoObject();
+            var entityProps = GetBaseProps(entity, allowEmptyPartitionKey: true, defaultId: single ? $"{source.Id}-{target.Id}" : null);
+
+            res.id = entityProps["/Id"].ToString();
+            res.label = entityProps["/Label"].ToString();
+            res._isEdge = true;
+
+            res._vertexId = source.Id;
+            res._vertexLabel = source.Label;
+            res.PartitionKey = source.PartitionKey;
+
+            res._sink = target.Id;
+            res._sinkLabel = target.Label;
+            res._sinkPartition = target.PartitionKey;
 
             var propsDic = res as IDictionary<string, object>;
             foreach (var prop in entityProps.Where(p => !p.Key.StartsWith("/") && !_illegalEdgePropertyNames.Contains(p.Key) && p.Key != _partitionKeyPropertyName))
@@ -192,8 +216,7 @@ namespace CosmosDb.Helpers
                     foreach (var sp in p.Value)
                     {
                         //var v = (sp.Value as System.<JToken, object>);
-
-                        instance[sp.Key] = sp.Value.FirstOrDefault()?["value"] ?? sp.Value.ToString();
+                        instance[sp.Key] = ((sp.Value as IEnumerable<object>)?.FirstOrDefault() as Dictionary<string, object>)?.GetValueOrDefault("value") ?? sp.Value.ToString();
                     }
                 }
                 else
@@ -224,7 +247,7 @@ namespace CosmosDb.Helpers
             return instance;
         }
 
-        private static Dictionary<string, object> GetBaseProps<T>(T entity, bool expandAllProps = true, bool allowEmptyPartitionKey = false)
+        private static Dictionary<string, object> GetBaseProps<T>(T entity, bool expandAllProps = true, bool allowEmptyPartitionKey = false, string defaultId = null)
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
@@ -242,7 +265,7 @@ namespace CosmosDb.Helpers
                 throw new Exception("More than 1 Id property defined.");
 
             res["/Label"] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
-            res["/Id"] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
+            res["/Id"] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? defaultId ?? Guid.NewGuid().ToString();
             res["/PartitionKey"] = pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
 
             if (expandAllProps)

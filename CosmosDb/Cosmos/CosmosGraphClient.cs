@@ -15,10 +15,11 @@ namespace CosmosDb
         {
             using (var gremlinClient = new GremlinClient(_server))
             {
-                var result =
-                    await gremlinClient.SubmitWithSingleResultAsync<object>(queryString);
+                var start = DateTime.Now;
+                var result = await gremlinClient.SubmitWithSingleResultAsync<object>(queryString);
+                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+                return new CosmosResponse { Result = result, RU = -1, ExecutionTimeMs = duration };
             }
-            return null;
         }
         public async Task<CosmosResponse<T>> ExecuteGremlingSingle<T>(string queryString)
         {
@@ -26,8 +27,10 @@ namespace CosmosDb
             {
                 using (var gremlinClient = new GremlinClient(_server))
                 {
+                    var start = DateTime.Now;
                     var result = await gremlinClient.SubmitWithSingleResultAsync<T>(queryString);
-                    return new CosmosResponse<T> { Result = result, RU = -1 };
+                    var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+                    return new CosmosResponse<T> { Result = result, RU = -1, ExecutionTimeMs = duration };
                 }
             }
             catch (Exception e)
@@ -41,8 +44,10 @@ namespace CosmosDb
             {
                 using (var gremlinClient = new GremlinClient(_server))
                 {
+                    var start = DateTime.Now;
                     var result = await gremlinClient.SubmitAsync<T>(queryString);
-                    return new CosmosResponse<IEnumerable<T>> { Result = result, RU = -1 };
+                    var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+                    return new CosmosResponse<IEnumerable<T>> { Result = result, RU = -1, ExecutionTimeMs = duration };
                 }
             }
             catch (Exception e)

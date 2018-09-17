@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CosmosDb.Domain;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -24,7 +25,13 @@ namespace CosmosDb
         Task<CosmosResponse<T>> ReadGraphVertex<T>(string docId, string partitionKey);
 
         Task<CosmosResponse> InsertGraphEdge<T, U, V>(T edge, U source, V target);
-        Task<CosmosResponse> UpsertGraphEdge<T, U, V>(T edge, U source, V target);
+        Task<IEnumerable<CosmosResponse>> InsertGraphVertex<T>(IEnumerable<T> vertices, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+        Task<CosmosResponse> UpsertGraphEdge<T, U, V>(T edge, U source, V target, bool single = false);
+        Task<IEnumerable<CosmosResponse>> UpsertGraphVertex<T>(IEnumerable<T> vertices, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
+        Task<CosmosResponse> InsertGraphEdge<T>(T edge, GraphItemBase source, GraphItemBase target);
+        Task<CosmosResponse> UpsertGraphEdge<T>(T edge, GraphItemBase source, GraphItemBase target, bool single = false);
+
 
         Task<CosmosResponse> ExecuteGremlingSingle(string queryString);
         Task<CosmosResponse<T>> ExecuteGremlingSingle<T>(string queryString);
