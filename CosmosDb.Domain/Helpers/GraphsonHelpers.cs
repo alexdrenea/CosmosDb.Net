@@ -110,7 +110,7 @@ namespace CosmosDb.Domain.Helpers
             if (graphson == null) return default(T);
             var dataType = typeof(T);
             var entity = (T)Activator.CreateInstance(dataType);
-            var allProps = dataType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToList();
+            var allProps = dataType.GetRuntimeProperties().ToList();
 
             var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute")).FirstOrDefault();
             if (labelProp != null)
@@ -172,7 +172,7 @@ namespace CosmosDb.Domain.Helpers
             if (doc == null) return default(T);
             var dataType = typeof(T);
             var entity = (T)Activator.CreateInstance(dataType);
-            var allProps = dataType.GetProperties(BindingFlags.Public | BindingFlags.Instance).ToList();
+            var allProps = dataType.GetRuntimeProperties().ToList();
 
             var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute")).FirstOrDefault();
             if (labelProp != null)
@@ -216,7 +216,7 @@ namespace CosmosDb.Domain.Helpers
                     foreach (var sp in p.Value)
                     {
                         //var v = (sp.Value as System.<JToken, object>);
-                        instance[sp.Key] = ((sp.Value as IEnumerable<object>)?.FirstOrDefault() as Dictionary<string, object>)?.GetValueOrDefault("value") ?? sp.Value.ToString();
+                        instance[sp.Key] = ((sp.Value as IEnumerable<object>)?.FirstOrDefault() as Dictionary<string, object>)?["value"] ?? sp.Value.ToString();
                     }
                 }
                 else
@@ -251,7 +251,7 @@ namespace CosmosDb.Domain.Helpers
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
-            var allProps = dataType.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var allProps = dataType.GetRuntimeProperties();
 
             var pkProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "PartitionKeyAttribute"));
             var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute"));
@@ -288,14 +288,14 @@ namespace CosmosDb.Domain.Helpers
             if (pkProperty == null)
                 throw new Exception("PartitionKey property defined must be defined.");
 
-            res["Label"] = dataType.GetProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.Name;
-            res["Id"] = dataType.GetProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
-            res["PropertyKey"] = dataType.GetProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
+            res["Label"] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.Name;
+            res["Id"] = dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
+            res["PropertyKey"] = dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
 
             if (expandAllProps)
             {
                 //Todo - nicer way ?
-                var props = dataType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                var props = dataType.GetRuntimeProperties()
                                         .Where(p => !p.CustomAttributes.Any(a => _ignoredPropertAttributes.Contains(a.AttributeType.Name)))
                                         .Select(p => new KeyValuePair<string, object>(p.Name, p.GetValue(entity) ?? ""));
                 foreach (var p in props)

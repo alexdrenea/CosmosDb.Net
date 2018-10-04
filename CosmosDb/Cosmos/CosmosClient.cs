@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Reflection;
 using CosmosDb.Domain;
 
 namespace CosmosDb
@@ -321,7 +322,7 @@ namespace CosmosDb
             {
                 return (T)result;
             }
-            if (typeof(T).IsPrimitive)
+            if (typeof(T).GetTypeInfo().IsPrimitive)
             {
                 return (T)Convert.ChangeType(result, typeof(T));
             }
