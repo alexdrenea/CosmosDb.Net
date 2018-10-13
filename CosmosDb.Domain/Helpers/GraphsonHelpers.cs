@@ -137,7 +137,14 @@ namespace CosmosDb.Domain.Helpers
                     {
                         try
                         {
-                            dataProp.SetValue(entity, Convert.ChangeType(value, dataProp.PropertyType));
+                            if (dataProp.PropertyType.GetTypeInfo().BaseType == typeof(Enum))
+                            {
+                                dataProp.SetValue(entity, Convert.ChangeType(value, typeof(int)));
+                            }
+                            else
+                            {
+                                dataProp.SetValue(entity, Convert.ChangeType(value, dataProp.PropertyType));
+                            }
                         }
                         catch (Exception e)
                         {
