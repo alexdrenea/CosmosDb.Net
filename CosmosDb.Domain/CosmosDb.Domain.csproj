@@ -6,8 +6,10 @@
     <Authors>AlexDrenea</Authors>
     <Description>Domain classes for CosmosDB sdk</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Copyright>AlexDrenea 2018</Copyright>
+    <Copyright>AlexDrenea 2019</Copyright>
     <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+    <PackageLicenseUrl>https://mit-license.org/</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/alexdrenea/CosmosDB.NET</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
