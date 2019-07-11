@@ -1,4 +1,5 @@
 ﻿using CosmosDb;
+using Microsoft.Azure.Cosmos;
 using System;
 
 namespace CosmosDb.Repl
@@ -8,15 +9,15 @@ namespace CosmosDb.Repl
     /// </summary>
     public class CosmosDbConfig
     {
-        private Lazy<ICosmosClient> _client;
+        private Lazy<CosmosContainer> _client;
         private Lazy<ICosmosGraphClient> _graphClient;
 
         public CosmosDbConfig()
         {
-            _client  = new Lazy<ICosmosClient>(
+            _client  = new Lazy<CosmosContainer>(
                 () =>
                 {
-                    return CosmosClient.GetCosmosClient(Endpoint, AuthKey, Database, Collection, false).GetAwaiter().GetResult();
+                    return CosmosClientExtionsions.GetCosmosContainer(ConnectionString, Database, Collection, false).GetAwaiter().GetResult();
                 });
             _graphClient = new Lazy<ICosmosGraphClient>(
                () =>
@@ -30,9 +31,10 @@ namespace CosmosDb.Repl
         public string GraphEndpoint { get; set; }
         public string AuthKey { get; set; }
         public string Database { get; set; }
+        public string ConnectionString { get; set; }
         public string Collection { get; set; }
         
-        public Lazy<ICosmosClient> Client { get { return _client; } }
+        public Lazy<CosmosContainer> Client { get { return _client; } }
         public Lazy<ICosmosGraphClient> GraphClient { get { return _graphClient; } }
     }
 }

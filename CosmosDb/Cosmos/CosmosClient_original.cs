@@ -16,7 +16,7 @@ using CosmosDb.Domain;
 
 namespace CosmosDb
 {
-    public class CosmosClient : ICosmosClient
+    public class CosmosClient_o : ICosmosClient
     {
         private DocumentClient _client;
         private DocumentCollection _collection;

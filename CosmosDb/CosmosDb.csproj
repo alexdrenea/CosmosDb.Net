@@ -1,19 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.6</TargetFramework>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <PackageVersion>0.0.1-local-prerelease</PackageVersion>
     <Authors>AlexDrenea</Authors>
     <Description>Wrappers for various CosmosDB operations</Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>AlexDrenea 2018</Copyright>
     <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/alexdrenea/CosmosDB.NET</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Cosmos\CosmosClient_original.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Gremlin.Net" Version="3.2.7" />
-    <PackageReference Include="Microsoft.Azure.Graphs" Version="0.3.1-preview" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.0.0.17-preview" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.9.0" />
   </ItemGroup>
 

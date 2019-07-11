@@ -177,21 +177,22 @@ namespace CosmosDb.Repl
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Restart();
-                var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
+                // var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
+                var queryResult = new CosmosResponse<string>();
                 if (!queryResult.IsSuccessful)
                 {
                     Console.WriteLine($"Query failed! {queryResult.Error}");
                     return;
                 }
                 _lastResultSet = new List<JObject>();
-                foreach (var result in queryResult.Result)
-                {
-                    if (!result.GetType().IsPrimitive && result.GetType() != typeof(string))
-                    {
-                        _lastResultSet.Add(GraphsonHelpers.GraphsonToFlatJObject(result));
-                    }
-                    Console.WriteLine(result.ToString());
-                }
+                //foreach (var result in queryResult.Result)
+                //{
+                //    if (!result.GetType().IsPrimitive && result.GetType() != typeof(string))
+                //    {
+                //        _lastResultSet.Add(GraphsonHelpers.GraphsonToFlatJObject(result));
+                //    }
+                //    Console.WriteLine(result.ToString());
+                //}
 
                 sw.Stop();
                 Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
