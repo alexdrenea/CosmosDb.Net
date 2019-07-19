@@ -7,6 +7,7 @@ namespace CosmosDb.Domain.Helpers
     {
         public static string GetName<T>(this Expression<Func<T, object>> exp)
         {
+            if (exp == null) return string.Empty;
             MemberExpression body = exp.Body as MemberExpression;
 
             if (body == null)

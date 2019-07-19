@@ -151,7 +151,7 @@ namespace CosmosDb.Repl
                 {
                     if (!result.GetType().IsPrimitive)
                     {
-                        var flat = GraphsonHelpers.GraphsonNetToFlatJObject(result);
+                        var flat = GraphsonNetToFlatJObject(result);
                         _lastResultSet.Add(flat);
                         Console.WriteLine(flat.ToString());
                     }
@@ -177,8 +177,7 @@ namespace CosmosDb.Repl
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Restart();
-                // var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
-                var queryResult = new CosmosResponse<string>();
+                var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
                 if (!queryResult.IsSuccessful)
                 {
                     Console.WriteLine($"Query failed! {queryResult.Error}");
@@ -219,6 +218,46 @@ namespace CosmosDb.Repl
             Console.WriteLine($"Exported {_lastResultSet.Count} items to {fName}");
         }
 
+        public static JObject GraphsonNetToFlatJObject(dynamic obj)
+        {
+            var instance = new JObject();
+            foreach (var p in obj)
+            {
+                if (p.Key == "properties")
+                {
+                    foreach (var sp in p.Value)
+                    {
+                        //var v = (sp.Value as System.<JToken, object>);
+                        instance[sp.Key] = ((sp.Value as IEnumerable<object>)?.FirstOrDefault() as Dictionary<string, object>)?["value"] ?? sp.Value.ToString();
+                    }
+                }
+                else
+                {
+                    instance[p.Key] = (p.Value as JToken)?.Values()?.FirstOrDefault()?.ToString() ?? p.Value.ToString();
+                }
+            }
+            return instance;
+        }
+
+        public static JObject GraphsonToFlatJObject(JObject obj)
+        {
+            var instance = new JObject();
+            foreach (var p in obj)
+            {
+                if (p.Key == "properties")
+                {
+                    foreach (var sp in p.Value.OfType<JProperty>())
+                    {
+                        instance[sp.Name] = sp.Value.FirstOrDefault()?["value"] ?? sp.Value.ToString();
+                    }
+                }
+                else
+                {
+                    instance[p.Key] = (p.Value as JToken)?.Values()?.FirstOrDefault()?.ToString() ?? p.Value.ToString();
+                }
+            }
+            return instance;
+        }
         #endregion
     }
 }
