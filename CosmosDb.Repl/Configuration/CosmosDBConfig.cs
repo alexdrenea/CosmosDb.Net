@@ -9,15 +9,15 @@ namespace CosmosDb.Repl
     /// </summary>
     public class CosmosDbConfig
     {
-        private Lazy<CosmosDbClient> _client;
+        private Lazy<CosmosSqlClient> _client;
         private Lazy<ICosmosGraphClient> _graphClient;
 
         public CosmosDbConfig()
         {
-            _client  = new Lazy<CosmosDbClient>(
+            _client  = new Lazy<CosmosSqlClient>(
                 () =>
                 {
-                    return CosmosDbClient.GetCosmosDbClient(ConnectionString, Database, Collection, forceCreate: true).GetAwaiter().GetResult();
+                    return CosmosSqlClient.GetCosmosDbClient(ConnectionString, Database, Collection, forceCreate: true).GetAwaiter().GetResult();
                 });
             _graphClient = new Lazy<ICosmosGraphClient>(
                () =>
@@ -34,7 +34,7 @@ namespace CosmosDb.Repl
         public string ConnectionString { get; set; }
         public string Collection { get; set; }
         
-        public Lazy<CosmosDbClient> Client { get { return _client; } }
+        public Lazy<CosmosSqlClient> Client { get { return _client; } }
         public Lazy<ICosmosGraphClient> GraphClient { get { return _graphClient; } }
     }
 }

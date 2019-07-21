@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
@@ -37,7 +38,7 @@ namespace CosmosDb.Domain.Helpers
         /// <summary>
         /// Defines a set of properties that the convertes will add on to the result set as the default properties
         /// </summary>
-        private static string[] _ignoredPropertyNames = _propertyNames.Values.Select(p=>p.ToLower()).ToArray();
+        private static string[] _ignoredPropertyNames = _propertyNames.Values.Select(p => p.ToLower()).ToArray();
 
 
 
@@ -91,7 +92,7 @@ namespace CosmosDb.Domain.Helpers
         /// <example>
         /// ToGraphVertex(entity, pkProperty: entity => entity.Title, labelProp: entity => entity.ItemType, idProp: entity => entity.EntityId) 
         /// </example>
-        public static dynamic ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
+        public static IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
         {
             var vertexProps = GetObjectPropValues(data, pkProperty, labelProp, idProp);
             return ToGraphVertexInternal(vertexProps);
@@ -110,7 +111,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph vertex entry in a CosmosDB Graph collection
         /// </returns>
-        public static dynamic ToGraphVertex<T>(this T entity)
+        public static IDictionary<string, object> ToGraphVertex<T>(this T entity)
         {
             var vertexProps = GetObjectPropValues(entity);
             return ToGraphVertexInternal(vertexProps);
@@ -130,8 +131,11 @@ namespace CosmosDb.Domain.Helpers
         ///  }
         /// ]
         /// </summary>
-        private static dynamic ToGraphVertexInternal(IDictionary<string, object> vertexProps)
+        private static IDictionary<string, object> ToGraphVertexInternal(IDictionary<string, object> vertexProps)
         {
+            //https://docs.microsoft.com/en-us/azure/cosmos-db/gremlin-support
+            // Cosmos does not support complex graph properties. Those need to be serialized as a string when encountered.
+
             var res = new Dictionary<string, object>();
             res[_propertyNames[KnownProperties.Id]] = vertexProps[_propertyNames[KnownProperties.Id]].ToString();
             res[_propertyNames[KnownProperties.Label]] = vertexProps[_propertyNames[KnownProperties.Label]].ToString();
@@ -139,12 +143,16 @@ namespace CosmosDb.Domain.Helpers
 
             foreach (var prop in vertexProps.Where(p => !_ignoredPropertyNames.Contains(p.Key.ToLower())))
             {
+                var value = prop.Value;
+                if (!IsTypeDirectlySerializableToGraph(value.GetType()))
+                    value = JsonConvert.SerializeObject(prop.Value);
+
                 res[prop.Key] = new[]
                 {
                     new
                     {
                         id = Guid.NewGuid().ToString(),
-                        _value = prop.Value,
+                        _value = value,
                         _meta = new Dictionary<string, object>()
                     }
                 };
@@ -167,7 +175,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph edge entry in a CosmosDB Graph collection
         /// </returns>
-        public static dynamic ToGraphEdge<T, U, V>(this T entity, U source, V target, bool single = false)
+        public static IDictionary<string, object> ToGraphEdge<T, U, V>(this T entity, U source, V target, bool single = false)
         {
             var sourceProps = GetObjectPropValues(source, expandAllProps: false);
             var targetProps = GetObjectPropValues(target, expandAllProps: false);
@@ -191,7 +199,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph edge entry in a CosmosDB Graph collection
         /// </returns>
-        public static dynamic ToGraphEdge<T>(this T entity, GraphItemBase source, GraphItemBase target, bool single = false)
+        public static IDictionary<string, object> ToGraphEdge<T>(this T entity, GraphItemBase source, GraphItemBase target, bool single = false)
         {
             var entityProps = GetObjectPropValues(entity, allowEmptyPartitionKey: true, defaultId: single ? $"{source.Id}-{target.Id}" : null);
 
@@ -208,6 +216,7 @@ namespace CosmosDb.Domain.Helpers
 
             foreach (var prop in entityProps.Where(p => !_ignoredPropertyNames.Contains(p.Key.ToLower())))
             {
+                //TODO - either throw an exception or handle the complex properties case.
                 res[prop.Key] = prop.Value;
             }
 
@@ -215,106 +224,52 @@ namespace CosmosDb.Domain.Helpers
         }
 
 
-
-        public static T FromGraphson<T>(JObject graphson)
+        /// <summary>
+        /// When reading a vertex from a graph database using either SQL or Gremlin.NET Api, we need to convert the incoming graphson result into the model.
+        /// </summary>
+        public static T FromGraphson<T>(JObject document)
         {
-            if (graphson == null) return default(T);
+            if (document == null) return default(T);
             var dataType = typeof(T);
             var entity = (T)Activator.CreateInstance(dataType);
             var allProps = dataType.GetRuntimeProperties().ToList();
 
-            var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute")).FirstOrDefault();
-            if (labelProp != null)
-                labelProp.SetValue(entity, graphson["label"]?.ToString());
-            var idProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "IdAttribute")).FirstOrDefault();
-            if (idProp != null)
-                idProp.SetValue(entity, graphson["id"]?.ToString());
-            var pkProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "PartitionKeyAttribute")).FirstOrDefault();
-            if (pkProp != null)
-                pkProp.SetValue(entity, graphson["properties"]["PartitionKey"]?.FirstOrDefault()?["value"]?.ToString());
-
-            allProps.Remove(pkProp);
-            allProps.Remove(labelProp);
-            allProps.Remove(idProp);
-
-            var properties = graphson["properties"] as JObject;
+            //If document was read via the Sql API, then its representation will contain all properties at the root of the JObject, and the values will be found under the `_value` property
+            var graphsonValuePropName = "_value";
+            var graphson = document;
+            //If document was read via the Gremlin API, then its representation will contain all properties in a 'properties' JObject, and the values will be found under the `value` property
+            var properties = document["properties"] as JObject;
             if (properties != null)
             {
-                foreach (var p in properties)
-                {
-                    var dataProp = allProps.FirstOrDefault(x => x.Name == p.Key);
-                    var value = p.Value.FirstOrDefault()?["value"]?.ToString() ?? p.Value.ToString();
-                    if (dataProp != null && !string.IsNullOrEmpty(value))
-                    {
-                        try
-                        {
-                            if (dataProp.PropertyType.GetTypeInfo().BaseType == typeof(Enum))
-                            {
-                                dataProp.SetValue(entity, Convert.ChangeType(value, typeof(int)));
-                            }
-                            else
-                            {
-                                dataProp.SetValue(entity, Convert.ChangeType(value, dataProp.PropertyType));
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            //can't set value - will default to type default
-                        }
-                    }
-                }
+                graphson = properties;
+                graphsonValuePropName = "value";
             }
-            else
+
+            foreach (var p in graphson)
             {
-                foreach (var prop in allProps)
-                {
-                    var value = graphson?[prop.Name]?.ToString();
-                    if (!string.IsNullOrEmpty(value))
-                    {
-                        try
-                        {
-                            prop.SetValue(entity, Convert.ChangeType(value, prop.PropertyType));
-                        }
-                        catch (Exception e)
-                        {
-                            //can't set value - will default to type default
-                        }
-                    }
-                }
-            }
-            return entity;
-        }
-
-        public static T FromDocument<T>(JObject doc)
-        {
-            if (doc == null) return default(T);
-            var dataType = typeof(T);
-            var entity = (T)Activator.CreateInstance(dataType);
-            var allProps = dataType.GetRuntimeProperties().ToList();
-
-            var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute")).FirstOrDefault();
-            if (labelProp != null)
-                labelProp.SetValue(entity, doc["label"]?.ToString());
-            var idProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "IdAttribute")).FirstOrDefault();
-            if (idProp != null)
-                idProp.SetValue(entity, doc["id"]?.ToString());
-            var pkProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "PartitionKeyAttribute")).FirstOrDefault();
-            if (pkProp != null)
-                pkProp.SetValue(entity, doc["PartitionKey"]?.ToString());
-            allProps.Remove(pkProp);
-            allProps.Remove(labelProp);
-            allProps.Remove(idProp);
-
-            foreach (var p in doc)
-            {
-                //TODO - serialize with json based on prop type.!!!!
                 var dataProp = allProps.FirstOrDefault(x => x.Name == p.Key);
-                var value = p.Value.FirstOrDefault()?["_value"]?.ToString();
+                var value = p.Value.FirstOrDefault()?[graphsonValuePropName]?.ToString() ?? p.Value.ToString();
                 if (dataProp != null && !string.IsNullOrEmpty(value))
                 {
                     try
                     {
-                        dataProp.SetValue(entity, Convert.ChangeType(value, dataProp.PropertyType));
+                        object serializedValue = null;
+
+                        if (dataProp.PropertyType.GetTypeInfo().BaseType == typeof(Enum))
+                        {
+                            //Enums have to be parsed since we're storing their integer value.
+                            dataProp.SetValue(entity, Convert.ChangeType(value, typeof(int)));
+                        }
+                        else if (IsTypeDirectlySerializableToGraph(dataProp.PropertyType) && dataProp.PropertyType.GetTypeInfo().ImplementedInterfaces.Contains(typeof(System.IConvertible)))
+                        {   //can be converted directly
+                            serializedValue = Convert.ChangeType(value, dataProp.PropertyType);
+                        }
+                        else
+                        {   //try a json serializer
+                            serializedValue = JsonConvert.DeserializeObject(value, dataProp.PropertyType);
+                        }
+
+                        dataProp.SetValue(entity, serializedValue);
                     }
                     catch (Exception e)
                     {
@@ -390,9 +345,16 @@ namespace CosmosDb.Domain.Helpers
                                         .Select(p => new KeyValuePair<string, object>(p.Name, p.GetValue(entity) ?? ""));
                 foreach (var p in props)
                     res.Add(p.Key, p.Value);
-            }
 
+            }
             return res;
+        }
+
+
+        private static bool IsTypeDirectlySerializableToGraph(Type t)
+        {
+            var ti = t.GetTypeInfo();
+            return ti.IsPrimitive || ti.IsEnum || t == typeof(DateTime) || t == typeof(string);
         }
     }
 }

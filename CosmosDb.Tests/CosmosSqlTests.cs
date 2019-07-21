@@ -1,5 +1,3 @@
-using CosmosDb.Cosmos;
-using CosmosDb.Domain.Helpers;
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,11 +9,13 @@ using System.Threading.Tasks;
 namespace CosmosDb.Tests
 {
     [TestClass]
-    public class ConversionTests
+    public class CosmosSqlTests
     {
         private static List<MovieCsv> _movies;
         private static List<CastCsv> _cast;
-        private static ICosmosClient _cosmosClient;
+        private static ICosmosSqlClient _cosmosClient;
+
+        private static string cosmosSqlConnectionString = "AccountEndpoint=https://mlsdatabasesql.documents.azure.com:443/;AccountKey=YdpG8nEhoeSXZjHoD9d4h4UJUEFyLJu89PqM7zqm9EBHjF6FXedA2nKAZTqmhJ7zcGHzJAv2WC3BnNXNBl9yJg==;";
 
         [ClassInitialize]
         public static async Task LoadSampleData(TestContext context)
@@ -26,7 +26,7 @@ namespace CosmosDb.Tests
             Assert.AreEqual(4802, _movies.Count());
             Assert.AreEqual(106257, _cast.Count());
 
-            _cosmosClient = await CosmosDbClient.GetCosmosDbClient("AccountEndpoint=https://mlsdatabasesql.documents.azure.com:443/;AccountKey=YdpG8nEhoeSXZjHoD9d4h4UJUEFyLJu89PqM7zqm9EBHjF6FXedA2nKAZTqmhJ7zcGHzJAv2WC3BnNXNBl9yJg==;", "test", "test1", forceCreate: false);
+            _cosmosClient = await CosmosSqlClient.GetCosmosDbClient(cosmosSqlConnectionString, "test", "test1", forceCreate: false);
         }
 
         [TestMethod]
@@ -36,14 +36,12 @@ namespace CosmosDb.Tests
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
             var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var insert = await _cosmosClient.InsertDocument(movieFull);
+            //var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
 
-            var movieDoc = SerializationHelpers.ToCosmosDocument(movieFull);
-
-
-            //var insert = await _cosmosClient.InsertDocument(movieDoc);
-
-            var upsert = await _cosmosClient.InsertDocument(movieDoc);
-            var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            // insert 
+            // read
+            // insert again -> expect error
         }
 
         [TestMethod]
@@ -55,8 +53,21 @@ namespace CosmosDb.Tests
             var movieFull = MapperHelpers.GetMovieFull(movie, cast);
 
             var upsert = await _cosmosClient.UpsertDocument(movieFull);
+           // var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+        }
+
+        [TestMethod]
+        public async Task ReadDocument()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
+
+            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+
             var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
         }
+
+
 
         //TODO: test for document with ignored attributes
 

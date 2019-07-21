@@ -7,11 +7,23 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="TestData\CosmosResponses\CosmosGraphDocumentResponse.json" />
+    <None Remove="TestData\CosmosResponses\CosmosGraphGremlinResponse.json" />
+    <None Remove="TestData\CosmosResponses\CosmosSqlDocumentResponse.json" />
     <None Remove="TestData\Samples\movies_cast_lite.csv" />
     <None Remove="TestData\Samples\movies_lite.csv" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="TestData\CosmosResponses\CosmosGraphGremlinResponse.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\CosmosResponses\CosmosGraphDocumentResponse.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\CosmosResponses\CosmosSqlDocumentResponse.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="TestData\Samples\movies_cast_lite.csv">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

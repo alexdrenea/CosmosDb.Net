@@ -1,11 +1,13 @@
-using CosmosDb.Cosmos;
 using CosmosDb.Domain;
 using CosmosDb.Domain.Helpers;
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,9 +16,14 @@ namespace CosmosDb.Tests
     [TestClass]
     public class GraphDataTypesTests
     {
+        private static string CosmosGraphDocumentResponseString;
+        private static string CosmosGraphGremlinResponseString;
+
         [ClassInitialize]
         public static async Task Initialize(TestContext context)
         {
+            CosmosGraphDocumentResponseString = File.ReadAllText("TestData/CosmosResponses/CosmosGraphDocumentResponse.json");
+            CosmosGraphGremlinResponseString = File.ReadAllText("TestData/CosmosResponses/CosmosGraphGremlinResponse.json");
         }
 
         [TestMethod]
@@ -40,9 +47,10 @@ namespace CosmosDb.Tests
             if (!movieGraph.ContainsKey("Cast")) errors.Add("Document missing Cast property");
             if (!movieGraph.ContainsKey("MovieId")) errors.Add("Document missing MovieId property");
             if (!movieGraph.ContainsKey("Title")) errors.Add("Document missing Title property");
+            if (!movieGraph.ContainsKey("Format")) errors.Add("Document missing Format property");
 
             Assert.IsFalse(errors.Any(), string.Join(Environment.NewLine, errors.ToArray()));
-            Assert.AreEqual(10, movieGraph.Keys.Count(), "Document has extra properties");
+            Assert.AreEqual(11, movieGraph.Keys.Count(), "Document has extra properties");
 
             //Test values
             Assert.AreEqual(movie.MovieId, movieGraph["id"], "id not matching");
@@ -51,12 +59,13 @@ namespace CosmosDb.Tests
 
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
 
             AssertGraphProperty(movie.Budget, movieGraph, "Budget");
             AssertGraphProperty(movie.ReleaseDate, movieGraph, "ReleaseDate");
             AssertGraphProperty(movie.Runtime, movieGraph, "Runtime");
+            AssertGraphProperty(movie.Format, movieGraph, "Format");
         }
 
         [TestMethod]
@@ -90,8 +99,8 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
             Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
 
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
 
             AssertGraphProperty(movie.Title, movieGraph, "Title");
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
@@ -140,8 +149,8 @@ namespace CosmosDb.Tests
 
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
             AssertGraphProperty(movie.Budget, movieGraph, "Budget");
         }
 
@@ -177,8 +186,8 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
             Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
 
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
 
             AssertGraphProperty(movie.Budget, movieGraph, "Budget");
@@ -215,8 +224,8 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.Label, movieGraph["label"], "label not matching");
             Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
 
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
 
             AssertGraphProperty(movie.Budget, movieGraph, "Budget");
@@ -256,8 +265,8 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
             Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
 
-            AssertGraphProperty(movie.Rating, movieGraph, "Rating");
-            AssertGraphProperty(movie.Cast, movieGraph, "Cast");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
+            AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
 
@@ -481,7 +490,28 @@ namespace CosmosDb.Tests
 
 
 
+        [TestMethod]
+        public void ReadVertexWithSqlApi()
+        {
+            //Initialize Objects
+            var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphDocumentResponseString);
 
+
+            var doc = SerializationHelpers.FromGraphson<MovieFull>(graphDocJObject);
+            //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
+        }
+
+
+        [TestMethod]
+        public void ReadVertexWithGremlinApi()
+        {
+            //Initialize Objects
+            var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphGremlinResponseString);
+
+            var doc = SerializationHelpers.FromGraphson<MovieFull>(graphDocJObject);
+            //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
+
+        }
         //TODO: test for reading data from graph
     }
 }

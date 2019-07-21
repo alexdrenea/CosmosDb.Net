@@ -7,6 +7,13 @@ using System.Text;
 
 namespace CosmosDb.Tests.TestData.Models
 {
+    public enum MovieFormat
+    {
+        Regular,
+        Imax,
+        _3D
+    }
+
     /// <summary>
     /// A movie model that has all components of a potential real world model that someone might insert in a database.
     /// The model is annotated with all Key Cosmos Properties
@@ -27,6 +34,7 @@ namespace CosmosDb.Tests.TestData.Models
         public long Budget { get; set; }
         public Rating Rating { get; set; }
         public List<Cast> Cast { get; set; }
+        public MovieFormat Format { get; set; }
 
         public static Movie GetTestModel(string title)
         {
@@ -39,7 +47,8 @@ namespace CosmosDb.Tests.TestData.Models
                 Budget = 1000000,
                 Runtime = 121,
                 Rating = Rating.GetTestRating(title),
-                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) })
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
+                Format = (MovieFormat)rnd.Next(3)
             };
         }
     }
@@ -58,7 +67,6 @@ namespace CosmosDb.Tests.TestData.Models
         public Rating Rating { get; set; }
         public List<Cast> Cast { get; set; }
 
-
         public static MovieNoAttributes GetTestModel(string title)
         {
             var rnd = new Random();
@@ -70,7 +78,7 @@ namespace CosmosDb.Tests.TestData.Models
                 Budget = 1000000,
                 Runtime = 121,
                 Rating = Rating.GetTestRating(title),
-                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) })
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
             };
         }
     }
@@ -82,7 +90,7 @@ namespace CosmosDb.Tests.TestData.Models
     public class MovieNoLabelNoId
     {
         public string MovieId { get; set; }
-       
+
         [PartitionKey]
         public string Title { get; set; }
         public DateTime ReleaseDate { get; set; }
@@ -102,7 +110,7 @@ namespace CosmosDb.Tests.TestData.Models
                 Budget = 1000000,
                 Runtime = 121,
                 Rating = Rating.GetTestRating(title),
-                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) })
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
             };
         }
     }
@@ -141,7 +149,7 @@ namespace CosmosDb.Tests.TestData.Models
                 Budget = 1000000,
                 Runtime = 121,
                 Rating = Rating.GetTestRating(title),
-                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) })
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
             };
         }
     }
@@ -153,7 +161,7 @@ namespace CosmosDb.Tests.TestData.Models
     {
         [Id]
         public string Id { get; set; }
-        
+
         [PartitionKey]
         public string Title { get; set; }
 
@@ -177,7 +185,7 @@ namespace CosmosDb.Tests.TestData.Models
                 Budget = 1000000,
                 Runtime = 121,
                 Rating = Rating.GetTestRating(title),
-                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) })
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
             };
         }
     }
@@ -239,6 +247,7 @@ namespace CosmosDb.Tests.TestData.Models
         public Rating Rating { get; set; }
 
         public List<Cast> Cast { get; set; }
+        public MovieFormat Format { get; set; }
     }
 
 }

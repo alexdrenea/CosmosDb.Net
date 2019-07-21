@@ -1,18 +1,27 @@
-﻿using Gremlin.Net.Driver;
+﻿using CosmosDb.Domain;
+using Microsoft.Azure.Cosmos;
+using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace CosmosDb
 {
-    public interface ICosmosGraphClient
+    public interface ICosmosSqlClient
     {
-        GremlinServer GremlinServer { get; }
-        ICosmosSqlClient CosmosSqlClient { get; }
+        CosmosClient Client { get; }
+        Database Database { get; }
+        Container Container { get; }
 
+        Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query);
 
-        Task<CosmosResponse> ExecuteGremlingSingle(string queryString);
-        Task<CosmosResponse<T>> ExecuteGremlingSingle<T>(string queryString);
-        Task<CosmosResponse<IEnumerable<T>>> ExecuteGremlingMulti<T>(string queryString);
+        Task<ItemResponse<T>> InsertDocument<T>(T document);
+        Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
+        Task<ResponseMessage> UpsertDocument<T>(T document);
+        Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
+        Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey);
 
         //Task<CosmosResponse> InsertGraphVertex<T>(T vertex);
         //Task<CosmosResponse> UpsertGraphVertex<T>(T vertex);
