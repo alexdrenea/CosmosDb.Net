@@ -19,7 +19,7 @@ namespace CosmosDb.Tests
         private static string cosmosGraphAccountKey = "whnySIy325FgHd9h6iex6i0IRZ0QsJYRlmAjzURFD468TPYuh4jA9DfUFwNfXReJq85S54pUnxXJknWFczQvNw==";
 
         [ClassInitialize]
-        public static async Task LoadSampleData(TestContext context)
+        public static async Task Initialize(TestContext context)
         {
             _movies = Helpers.GetFromCsv<MovieCsv>("TestData/Samples/movies_lite.csv");
             _cast = Helpers.GetFromCsv<CastCsv>("TestData/Samples/movies_cast_lite.csv");
@@ -35,12 +35,18 @@ namespace CosmosDb.Tests
         {
             var movie = _movies.First();
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
-
             var movieFull = MovieFull.GetMovieFull(movie, cast);
-            var insert = await _cosmosClient.CosmosSqlClient.InsertDocument(movieFull);
-            //var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
 
-            // insert again -> expect error
+            var insert = await _cosmosClient.InsertVertex(movieFull);
+            Assert.IsTrue(insert.IsSuccessful);
+
+            var read = await _cosmosClient.ReadVertex<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
+
+            var insert2 = await _cosmosClient.InsertVertex(movieFull);
+            Assert.IsFalse(insert2.IsSuccessful, "Insert with same id should fail");
+
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
         }
 
         [TestMethod]
@@ -50,29 +56,35 @@ namespace CosmosDb.Tests
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
             var movieFull = MovieFull.GetMovieFull(movie, cast);
-            var upsert = await _cosmosClient.CosmosSqlClient.UpsertDocument(movieFull);
+            var upsert = await _cosmosClient.UpsertVertex(movieFull);
+            Assert.IsTrue(upsert.IsSuccessful);
 
-            // var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            var read = await _cosmosClient.ReadVertex<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
 
-            //update movieFull property
-            //upsert
-            //read again, confirm change
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
 
-            
+            movieFull.Budget += 1;
+
+            var upsert2 = await _cosmosClient.UpsertVertex(movieFull);
+            Assert.IsTrue(upsert2.IsSuccessful);
+            var read2 = await _cosmosClient.ReadVertex<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
+
+            Helpers.AssertMovieFullIsSame(movieFull, read2.Result);
+
         }
-
-        //TODO: upsert with ID change -> fail
-        //TODO: upasert with pk change -> fail
 
         [TestMethod]
         public async Task ReadDocument()
         {
             var movie = _movies.ElementAt(0);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
-
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-            var read = await _cosmosClient.CosmosSqlClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            var read = await _cosmosClient.ReadVertex<MovieFull>(movie.TmdbId, movie.Title);
+
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
         }
 
         [TestMethod]
@@ -80,11 +92,11 @@ namespace CosmosDb.Tests
         {
             var movie = _movies.ElementAt(0);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
-
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-            var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V().hasId('{movie.TmdbId}').has('PartitionKey', '{movie.Title}')");
-            //var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V()");
+            var read = await _cosmosClient.ExecuteGremlinSingle<MovieFull>($"g.V().hasId('{movie.TmdbId}').has('PartitionKey', '{movie.Title}')");
+
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
         }
 
 
@@ -96,8 +108,7 @@ namespace CosmosDb.Tests
 
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-            var read = await _cosmosClient.ExecuteGremlingMulti<MovieFull>($"g.V()");
-            //var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V()");
+            var read = await _cosmosClient.ExecuteGremlin<MovieFull>($"g.V()");
         }
 
         [TestMethod]
@@ -108,11 +119,15 @@ namespace CosmosDb.Tests
 
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-            var read = await _cosmosClient.CosmosSqlClient.ExecuteSQL<MovieFull>($"select * from c where c.label = 'MovieFull'");
+            var read = await _cosmosClient.ExecuteSQL<MovieFull>($"select * from c where c.label = 'MovieFull'");
         }
 
         //TODO: test for reading data from sql
 
         //TODO: test for reading data from graph
+
+        //TODO: test some weird traversals .tree(), .path(), etc.
+
+        //TODO test edges
     }
 }

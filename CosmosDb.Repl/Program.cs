@@ -140,7 +140,7 @@ namespace CosmosDb.Repl
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Restart();
-                var queryResult = await _selectedConnection.GraphClient.Value.ExecuteGremlingMulti<Object>(text);
+                var queryResult = await _selectedConnection.GraphClient.Value.ExecuteGremlin<Object>(text);
                 if (!queryResult.IsSuccessful)
                 {
                     Console.WriteLine($"Query failed! {queryResult.Error}");
@@ -159,7 +159,7 @@ namespace CosmosDb.Repl
                 }
 
                 sw.Stop();
-                Console.WriteLine($"Total request charge: {queryResult.RequestCharge} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
+                Console.WriteLine($"Total request charge: {queryResult.RequestCharge} RUs. Executed in {(queryResult.ExecutionTime).ToString()}ms");
             }
             catch (Exception e)
             {

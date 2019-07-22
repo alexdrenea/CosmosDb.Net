@@ -31,13 +31,37 @@ namespace CosmosDb.Domain
 
         public string ActivityId { get; set; }
         public string ETag { get; set; }
+
+        /// <summary>
+        /// Represents the time to wait before retrying an operation
+        /// Only retuned when StatusCode is 429 (RU limit exceded)
+        /// </summary>
         public TimeSpan? RetryAfter { get; set; }
+        
+        /// <summary>
+        /// Provide a way to continue reading the FeedItemIterator from where we left off.
+        /// Only returned when using ExecuteSQL
+        /// </summary>
+        public string ContinuationToken { get; set; }
+
     }
 
     public class CosmosResponse<T> : CosmosResponse
     {
-       
-
         public T Result { get; set; }
+
+        public CosmosResponse<U> Clone<U>()
+        {
+            return new CosmosResponse<U>
+            {
+                ActivityId = this.ActivityId,
+                Error = this.Error,
+                ETag = this.ETag,
+                ExecutionTime = this.ExecutionTime,
+                RequestCharge = this.RequestCharge,
+                RetryAfter = this.RetryAfter,
+                StatusCode = this.StatusCode,
+            };
+        }
     }
 }

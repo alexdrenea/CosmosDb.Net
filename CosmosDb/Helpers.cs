@@ -50,8 +50,6 @@ namespace CosmosDb
                 ActivityId = cosmosSDKResponse.ActivityId,
                 ETag = cosmosSDKResponse.ETag
             };
-            //if (typeof(T) == typeof(U))
-            //    res.Result = (T)cosmosSDKResponse.Resource;
 
             return res;
         }

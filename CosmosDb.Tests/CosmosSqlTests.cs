@@ -18,7 +18,7 @@ namespace CosmosDb.Tests
         private static string cosmosSqlConnectionString = "AccountEndpoint=https://mlsdatabasesql.documents.azure.com:443/;AccountKey=YdpG8nEhoeSXZjHoD9d4h4UJUEFyLJu89PqM7zqm9EBHjF6FXedA2nKAZTqmhJ7zcGHzJAv2WC3BnNXNBl9yJg==;";
 
         [ClassInitialize]
-        public static async Task LoadSampleData(TestContext context)
+        public static async Task Initialize(TestContext context)
         {
             _movies = Helpers.GetFromCsv<MovieCsv>("TestData/Samples/movies_lite.csv");
             _cast = Helpers.GetFromCsv<CastCsv>("TestData/Samples/movies_cast_lite.csv");
@@ -34,16 +34,18 @@ namespace CosmosDb.Tests
         {
             var movie = _movies.First();
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
-
             var movieFull = MovieFull.GetMovieFull(movie, cast);
+
             var insert = await _cosmosClient.InsertDocument(movieFull);
-            //var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(insert.IsSuccessful);
+
+            var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
 
             var insert2 = await _cosmosClient.InsertDocument(movieFull);
+            Assert.IsFalse(insert2.IsSuccessful, "Insert with same id should fail");
 
-            // insert 
-            // read
-            // insert again -> expect error
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
         }
 
         [TestMethod]
@@ -51,11 +53,24 @@ namespace CosmosDb.Tests
         {
             var movie = _movies.ElementAt(1);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
-
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var upsert = await _cosmosClient.UpsertDocument(movieFull);
-           // var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(upsert.IsSuccessful);
+
+            var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
+
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
+
+            movieFull.Budget += 1;
+
+            var upsert2 = await _cosmosClient.UpsertDocument(movieFull);
+            Assert.IsTrue(upsert2.IsSuccessful);
+            var read2 = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
+
+            Helpers.AssertMovieFullIsSame(movieFull, read2.Result);
         }
 
         [TestMethod]
@@ -67,26 +82,37 @@ namespace CosmosDb.Tests
             var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+            Assert.IsTrue(read.IsSuccessful);
+
+            Helpers.AssertMovieFullIsSame(movieFull, read.Result);
         }
 
+        [TestMethod]
+        public async Task ExecuteSql()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-        //TODO: test for document with ignored attributes
+            var read = await _cosmosClient.ExecuteSQL<MovieFull>("select * from c where c.Title = 'Avatar'");
+            Assert.IsTrue(read.IsSuccessful);
+        }
 
-        //TODO: test for document without attributes
+        [TestMethod]
+        public async Task ExecuteSqlSpecificParameters()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-        //TODO: Test for values in the document -> check each type, including complex type and arrays
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-        //TODO: test for graph format
+            var read = await _cosmosClient.ExecuteSQL<MovieFull>("select c.Title, c.Tagline, c.Overview from c");
+            Assert.IsTrue(read.IsSuccessful);
+        }
 
-        //TODO: test for graph format values
+        //TODO: Test with continuation
 
-
-        //TODO: Test for edges
-
-
-        //TODO: test for reading data from sql
-
-        //TODO: test for reading data from graph
+        //TODO: test with SQL not with *
     }
 }
