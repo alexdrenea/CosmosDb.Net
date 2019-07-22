@@ -22,16 +22,15 @@ namespace CosmosDb.Repl
             _graphClient = new Lazy<ICosmosGraphClient>(
                () =>
                {
-                   return CosmosGraphClient.GetCosmosGraphClient(GraphEndpoint, AuthKey, Database, Collection, false).GetAwaiter().GetResult();
+                   return CosmosGraphClient.GetCosmosGraphClientWithSql(AccountName, AuthKey, Database, Collection, forceCreate: false).GetAwaiter().GetResult();
                });
         }
 
         public string Name { get; set; }
-        public string Endpoint { get; set; }
-        public string GraphEndpoint { get; set; }
+        public string ConnectionString { get; set; }
+        public string AccountName { get; set; }
         public string AuthKey { get; set; }
         public string Database { get; set; }
-        public string ConnectionString { get; set; }
         public string Collection { get; set; }
         
         public Lazy<CosmosSqlClient> Client { get { return _client; } }

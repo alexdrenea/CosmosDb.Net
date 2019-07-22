@@ -512,6 +512,5 @@ namespace CosmosDb.Tests
             //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
 
         }
-        //TODO: test for reading data from graph
     }
 }

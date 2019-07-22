@@ -35,9 +35,11 @@ namespace CosmosDb.Tests
             var movie = _movies.First();
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
             var insert = await _cosmosClient.InsertDocument(movieFull);
             //var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
+
+            var insert2 = await _cosmosClient.InsertDocument(movieFull);
 
             // insert 
             // read
@@ -50,7 +52,7 @@ namespace CosmosDb.Tests
             var movie = _movies.ElementAt(1);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var upsert = await _cosmosClient.UpsertDocument(movieFull);
            // var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
@@ -62,7 +64,7 @@ namespace CosmosDb.Tests
             var movie = _movies.ElementAt(0);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
         }

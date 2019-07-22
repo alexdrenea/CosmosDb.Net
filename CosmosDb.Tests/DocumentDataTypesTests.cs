@@ -265,8 +265,5 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.Runtime, movieGraph["Runtime"], "Runtime not matching");
         }
 
-
-
-        //TODO: test for reading data from graph
     }
 }

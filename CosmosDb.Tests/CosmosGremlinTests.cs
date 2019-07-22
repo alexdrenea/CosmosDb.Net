@@ -36,7 +36,7 @@ namespace CosmosDb.Tests
             var movie = _movies.First();
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
             var insert = await _cosmosClient.CosmosSqlClient.InsertDocument(movieFull);
             //var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
 
@@ -49,7 +49,7 @@ namespace CosmosDb.Tests
             var movie = _movies.ElementAt(1);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
             var upsert = await _cosmosClient.CosmosSqlClient.UpsertDocument(movieFull);
 
             // var read = await _cosmosClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
@@ -70,7 +70,7 @@ namespace CosmosDb.Tests
             var movie = _movies.ElementAt(0);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var read = await _cosmosClient.CosmosSqlClient.ReadDocument<MovieFull>(movie.TmdbId, movie.Title);
         }
@@ -81,27 +81,35 @@ namespace CosmosDb.Tests
             var movie = _movies.ElementAt(0);
             var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-            var movieFull = MapperHelpers.GetMovieFull(movie, cast);
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
             var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V().hasId('{movie.TmdbId}').has('PartitionKey', '{movie.Title}')");
             //var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V()");
         }
 
 
+        [TestMethod]
+        public async Task ReadMultiWithGremlin()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-        //TODO: test for document with ignored attributes
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-        //TODO: test for document without attributes
+            var read = await _cosmosClient.ExecuteGremlingMulti<MovieFull>($"g.V()");
+            //var read = await _cosmosClient.ExecuteGremlingSingle<MovieFull>($"g.V()");
+        }
 
-        //TODO: Test for values in the document -> check each type, including complex type and arrays
+        [TestMethod]
+        public async Task ReadMultiWithSql()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast.Where(c => c.TmdbId == movie.TmdbId).ToList();
 
-        //TODO: test for graph format
+            var movieFull = MovieFull.GetMovieFull(movie, cast);
 
-        //TODO: test for graph format values
-
-
-        //TODO: Test for edges
-
+            var read = await _cosmosClient.CosmosSqlClient.ExecuteSQL<MovieFull>($"select * from c where c.label = 'MovieFull'");
+        }
 
         //TODO: test for reading data from sql
 

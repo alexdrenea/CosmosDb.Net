@@ -1,15 +1,11 @@
-﻿
-using CosmosDb.Domain.Helpers;
-using Newtonsoft.Json;
+﻿using CosmosDb.Domain.Helpers;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Threading;
-using System.Reflection;
 using CosmosDb.Domain;
 using Microsoft.Azure.Cosmos;
 using System.IO;
@@ -63,7 +59,7 @@ namespace CosmosDb
             return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, settings, initialContainerRUs, forceCreate);
         }
 
-       
+
         public static Task<CosmosSqlClient> GetCosmosDbClient(string accountEndpoint, string databaseId, string containerId, string key, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
         {
             var cco = new CosmosClientOptions()
@@ -152,20 +148,27 @@ namespace CosmosDb
 
         #endregion
 
-
-        public async Task<ItemResponse<T>> InsertDocument<T>(T document)
+        public Task<CosmosResponse> InsertDocument<T>(T document)
         {
-            try
-            {
-                var internalDoc = ConvertEntityToCosmos(document);
-                var res = await Container.CreateItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString()));
-                return null;
-            }
-            catch (Exception e)
-            {
-                var x = e.Message;
-                return null;
-            }
+            return AddDocInternal(document, (internalDoc) => Container.CreateItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString())));
+
+            //    try
+            //    {
+            //        var start = DateTime.Now;
+
+            //        var internalDoc = ConvertEntityToCosmos(document);
+            //        var res = await Container.CreateItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString()));
+
+            //        return res.ToCosmosResponse(DateTime.Now.Subtract(start));
+            //    }
+            //    catch (CosmosException cex)
+            //    {
+            //        return cex.ToCosmosResponse();
+            //    }
+            //    catch (Exception e)
+            //    {
+            //        return new CosmosResponse { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
+            //    }
         }
 
         public Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
@@ -174,20 +177,28 @@ namespace CosmosDb
             //return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, threads, reportingIntervalS);
         }
 
-        public async Task<ResponseMessage> UpsertDocument<T>(T document)
+        public Task<CosmosResponse> UpsertDocument<T>(T document)
         {
-            try
-            {
-                var internalDoc = ConvertEntityToCosmos(document);
-                var res = await Container.UpsertItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString()));
+            return AddDocInternal(document, (internalDoc) => Container.UpsertItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString())));
 
-                return null;
-            }
-            catch (Exception e)
-            {
-                var x = e.Message;
-                return null;
-            }
+            //try
+            //{
+            //    var start = DateTime.Now;
+
+            //    var internalDoc = ConvertEntityToCosmos(document);
+            //    var res = await Container.UpsertItemAsync(internalDoc, new PartitionKey(internalDoc[_partitionKeyPropertyName].ToString()));
+
+
+            //    return res.ToCosmosResponse(DateTime.Now.Subtract(start));
+            //}
+            //catch (CosmosException cex)
+            //{
+            //    return cex.ToCosmosResponse();
+            //}
+            //catch (Exception e)
+            //{
+            //    return new CosmosResponse { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
+            //}
         }
 
         public Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
@@ -196,14 +207,33 @@ namespace CosmosDb
             //return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, threads, reportingIntervalS);
         }
 
+
+
+        private async Task<CosmosResponse> AddDocInternal<T>(T document, Func<IDictionary<string, object>, Task<ItemResponse<IDictionary<string,object>>>> addFunc)
+        {
+            try
+            {
+                var start = DateTime.Now;
+
+                var internalDoc = ConvertEntityToCosmos(document);
+                var res = await addFunc.Invoke(internalDoc);
+
+                return res.ToCosmosResponse(DateTime.Now.Subtract(start));
+            }
+            catch (CosmosException cex)
+            {
+                return cex.ToCosmosResponse();
+            }
+            catch (Exception e)
+            {
+                return new CosmosResponse { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
+            }
+        }
+
+
         public async Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey)
         {
-            var stream = await Container.ReadItemStreamAsync(docId, new PartitionKey(partitionKey));
-            using (var sr = new StreamReader(stream.Content))
-            {
-                var data = await sr.ReadToEndAsync();
-            }
-
+            DateTime start = DateTime.Now;
             switch (ApiKind)
             {
                 case ApiKind.Sql:
@@ -211,8 +241,7 @@ namespace CosmosDb
                     return null;
                 case ApiKind.Gremlin:
                     var graphsonResult = await Container.ReadItemAsync<JObject>(docId, new PartitionKey(partitionKey));
-                    var doc = SerializationHelpers.FromGraphson<T>(graphsonResult);
-
+                    //var doc = SerializationHelpers.FromGraphson<T>(graphsonResult);
                     return null;
                 default:
                     throw new InvalidOperationException("This SDK only supports SQL or Gremlin Cosmos databases.");
@@ -223,19 +252,20 @@ namespace CosmosDb
         public async Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query)
         {
             var res = new List<T>();
-            var iterator = Container.GetItemQueryIterator<T>(new QueryDefinition(query));
+            var tempRes = new List<string>();
+            var iterator = Container.GetItemQueryIterator<string>(new QueryDefinition(query));
             while (iterator.HasMoreResults)
             {
                 var readNext = await iterator.ReadNextAsync();
 
-                res.AddRange(readNext.Resource);
+                tempRes.AddRange(readNext.Resource);
             }
 
             return null;
         }
 
 
-    
+
         public Task<CosmosResponse> InsertGraphEdge<T, U, V>(T edge, U source, V target)
         {
             throw new NotImplementedException();
@@ -271,7 +301,21 @@ namespace CosmosDb
                 default:
                     throw new NotSupportedException("This library only supports Sql And Gremlin Api Types.");
             }
-            
+
+        }
+
+        protected T ConvertCosmosResultToEntity<T>(JObject response)
+        {
+            //switch (ApiKind)
+            //{
+            //    case ApiKind.Sql:
+            //        return JsonConver.ToCosmosDocument<T>();
+            //    case ApiKind.Gremlin:
+            //        return entity.ToGraphVertex<T>();
+            //    default:
+            //        throw new NotSupportedException("This library only supports Sql And Gremlin Api Types.");
+            //}
+            return default(T);    
         }
 
         private async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, int threads = 4, int reportingIntervalS = 10)
@@ -303,6 +347,8 @@ namespace CosmosDb
             //TODO: call reporting callback to say we're done.
             return cb.ToArray();
         }
+
+
 
     }
 }

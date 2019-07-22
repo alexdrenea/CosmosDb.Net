@@ -1,4 +1,5 @@
-﻿using Gremlin.Net.Driver;
+﻿using CosmosDb.Domain;
+using Gremlin.Net.Driver;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 

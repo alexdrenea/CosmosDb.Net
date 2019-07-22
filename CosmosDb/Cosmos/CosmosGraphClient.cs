@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CosmosDb.Domain;
 using CosmosDb.Domain.Helpers;
 using Gremlin.Net.Driver;
+using Gremlin.Net.Structure.IO.GraphSON;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -13,6 +15,10 @@ namespace CosmosDb
     public class CosmosGraphClient : ICosmosGraphClient
     {
         private const string GraphEndpointFormat = "{0}.gremlin.cosmosdb.azure.com";
+        private const string RESULTSET_ATTRIBUTE_RU = "x-ms-total-request-charge";
+        private const string RESULTSET_ATTRIBUTE_STATUSCODE = "x-ms-status-code";
+        private const string RESULTSET_ATTRIBUTE_RETRYAFTER = "x-ms-retry-after-ms";
+
 
         public GremlinServer GremlinServer { get; private set; }
         public ICosmosSqlClient CosmosSqlClient { get; private set; }
@@ -20,54 +26,85 @@ namespace CosmosDb
 
         public async Task<CosmosResponse> ExecuteGremlingSingle(string queryString)
         {
-            using (var gremlinClient = new GremlinClient(GremlinServer))
+            using (var gremlinClient = GetGremlinClient())
             {
                 var start = DateTime.Now;
                 var result = await gremlinClient.SubmitWithSingleResultAsync<object>(queryString);
-                var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
-                return new CosmosResponse { Result = result, RU = -1, ExecutionTimeMs = duration };
+                return new CosmosResponse<object> { Result = result, StatusCode = System.Net.HttpStatusCode.OK, RequestCharge = -1, ExecutionTime = DateTime.Now.Subtract(start) };
             }
         }
+
         public async Task<CosmosResponse<T>> ExecuteGremlingSingle<T>(string queryString)
         {
             try
             {
-                using (var gremlinClient = new GremlinClient(GremlinServer))
+                using (var gremlinClient = GetGremlinClient())
                 {
                     var start = DateTime.Now;
-
-                    var graphResult = await gremlinClient.SubmitWithSingleResultAsync<object>(queryString);
+                    var graphResult = await gremlinClient.SubmitAsync<object>(queryString);
                     var graphResultString = JsonConvert.SerializeObject(graphResult);
-                    var graphResultJObject = JsonConvert.DeserializeObject<JObject>(graphResultString);
+                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString);
 
-                    var res = SerializationHelpers.FromGraphson<T>(graphResultJObject);
-                    var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
+                    var res = graphResultJObject.Select(SerializationHelpers.FromGraphson<T>).ToArray();
 
-                    return new CosmosResponse<T> { Result = res, RU = -1, ExecutionTimeMs = duration };
+                    return new CosmosResponse<T> { Result = res.First(), StatusCode = System.Net.HttpStatusCode.OK, RequestCharge = GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU), ExecutionTime = DateTime.Now.Subtract(start) };
                 }
             }
             catch (Exception e)
             {
-                return new CosmosResponse<T> { Result = default(T), Error = e, RU = -1 };
+                return new CosmosResponse<T>
+                {
+                    Result = default(T),
+                    Error = e,
+                    RequestCharge = -1
+                };
             }
         }
+
         public async Task<CosmosResponse<IEnumerable<T>>> ExecuteGremlingMulti<T>(string queryString)
         {
             try
             {
-                using (var gremlinClient = new GremlinClient(GremlinServer))
+                using (var gremlinClient = GetGremlinClient())
                 {
                     var start = DateTime.Now;
-                    var result = await gremlinClient.SubmitAsync<T>(queryString);
-                    var duration = (int)DateTime.Now.Subtract(start).TotalMilliseconds;
-                    return new CosmosResponse<IEnumerable<T>> { Result = result, RU = -1, ExecutionTimeMs = duration };
+                    var graphResult = await gremlinClient.SubmitAsync<object>(queryString);
+                    var graphResultString = JsonConvert.SerializeObject(graphResult);
+                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString);
+
+                    var res = graphResultJObject.Select(SerializationHelpers.FromGraphson<T>).ToArray();
+
+                    return new CosmosResponse<IEnumerable<T>>
+                    {
+                        Result = res,
+                        StatusCode = System.Net.HttpStatusCode.OK,
+                        RequestCharge = GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
+                        ExecutionTime = DateTime.Now.Subtract(start)
+                    };
                 }
             }
             catch (Exception e)
             {
-                return new CosmosResponse<IEnumerable<T>> { Result = null, Error = e, RU = -1 };
+                return new CosmosResponse<IEnumerable<T>>
+                {
+                    Result = null,
+                    Error = e,
+                    RequestCharge = -1
+                };
             }
         }
+
+
+        //TODO -> support for bindings (parametrized queries)
+        //public Task<CosmosResponse> InsertVertex<T>(T vertex)
+        //{
+
+        //}
+
+        //public Task<CosmosResponse> UpsertVertex<T>(T vertex)
+        //{
+
+        //}
 
 
         public static async Task<ICosmosGraphClient> GetCosmosGraphClientWithSql(string accountName, string databaseId, string containerId, string key, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
@@ -94,5 +131,28 @@ namespace CosmosDb
             };
         }
 
+
+
+        private GremlinClient GetGremlinClient()
+        {
+            return new GremlinClient(GremlinServer, new GraphSON2Reader(), new GraphSON2Writer(), GremlinClient.GraphSON2MimeType);
+        }
+
+        private static T GetValueOrDefault<T>(IReadOnlyDictionary<string, object> dictionary, string key)
+        {
+            if (dictionary.ContainsKey(key))
+            {
+                try
+                {
+                    return (T)Convert.ChangeType(dictionary[key], typeof(T));
+                }
+                catch
+                {
+                    return default(T);
+                }
+            }
+
+            return default(T);
+        }
     }
 }

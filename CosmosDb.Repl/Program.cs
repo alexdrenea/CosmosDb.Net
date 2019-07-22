@@ -159,7 +159,7 @@ namespace CosmosDb.Repl
                 }
 
                 sw.Stop();
-                Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
+                Console.WriteLine($"Total request charge: {queryResult.RequestCharge} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
             }
             catch (Exception e)
             {
@@ -177,12 +177,12 @@ namespace CosmosDb.Repl
             {
                 Stopwatch sw = new Stopwatch();
                 sw.Restart();
-                var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
-                if (!queryResult.IsSuccessful)
-                {
-                    Console.WriteLine($"Query failed! {queryResult.Error}");
-                    return;
-                }
+                //var queryResult = await _selectedConnection.Client.Value.ExecuteGremlingMulti<dynamic>(text);
+                //if (!queryResult.IsSuccessful)
+                //{
+                //    Console.WriteLine($"Query failed! {queryResult.Error}");
+                //    return;
+                //}
                 _lastResultSet = new List<JObject>();
                 //foreach (var result in queryResult.Result)
                 //{
@@ -194,7 +194,7 @@ namespace CosmosDb.Repl
                 //}
 
                 sw.Stop();
-                Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
+                //Console.WriteLine($"Total request charge: {queryResult.RU} RUs. Executed in {(queryResult.ExecutionTimeMs).ToString()}ms");
             }
             catch (Exception e)
             {

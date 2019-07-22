@@ -13,15 +13,16 @@ namespace CosmosDb
         Database Database { get; }
         Container Container { get; }
 
-        Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query);
 
-        Task<ItemResponse<T>> InsertDocument<T>(T document);
+        Task<CosmosResponse> InsertDocument<T>(T document);
         Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
 
-        Task<ResponseMessage> UpsertDocument<T>(T document);
+        Task<CosmosResponse> UpsertDocument<T>(T document);
         Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
 
         Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey);
+        Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query);
+
 
         //Task<CosmosResponse> InsertGraphVertex<T>(T vertex);
         //Task<CosmosResponse> UpsertGraphVertex<T>(T vertex);
