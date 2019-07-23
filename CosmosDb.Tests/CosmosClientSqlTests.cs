@@ -75,6 +75,7 @@ namespace CosmosDb.Tests
 
 
         [TestMethod]
+        [Priority(1)]
         public async Task InsertCosmosDocument()
         {
             var movie = _movies.ElementAt(0);
@@ -92,6 +93,7 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(2)]
         public async Task UpsertCosmosDocument()
         {
             var movie = _movies.ElementAt(1);
@@ -115,6 +117,34 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(3)]
+        public async Task Insert201CosmosDocuments()
+        {
+            //201 items so we have 3 pages.
+            var insert = await _cosmosClient.InsertDocuments(_movies.Skip(10).Take(201), (partial) => { Console.WriteLine($"inserted {partial.Count()} documents"); });
+
+            var totalRu = insert.Sum(i => i.RequestCharge);
+            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+        }
+
+        [TestMethod]
+        [Priority(4)]
+        public async Task Upsert201CosmosDocuments()
+        {
+            //201 items so we have 3 pages.
+            var insert = await _cosmosClient.UpsertDocuments(_movies.Skip(10).Take(201), (partial) => { Console.WriteLine($"upserted {partial.Count()} documents"); });
+
+            var totalRu = insert.Sum(i => i.RequestCharge);
+            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+        }
+
+
+        [TestMethod]
+        [Priority(10)]
         public async Task ReadDocument()
         {
             var movie = _movies.ElementAt(0);
@@ -126,6 +156,7 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(10)]
         public async Task ExecuteSql()
         {
             var movie = _movies.ElementAt(0);
@@ -137,6 +168,7 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(10)]
         public async Task ExecuteSqlWithContinuation()
         {
             var query = $"select * from c order by c.Title";
@@ -150,37 +182,16 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(10)]
         public async Task ExecuteSqlSpecificParameters()
         {
             var read = await _cosmosClient.ExecuteSQL<MovieFull>("select c.Title, c.Tagline, c.Overview from c");
             Assert.IsTrue(read.IsSuccessful);
         }
 
-        [TestMethod]
-        public async Task Insert201CosmosDocuments()
-        {
-            //201 items so we have 3 pages.
-            var insert = await _cosmosClient.InsertDocuments(_movies.Take(201), (partial) => { Console.WriteLine($"inserted {partial.Count()} documents"); });
-
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
-        }
-
-        [TestMethod]
-        public async Task Upsert201CosmosDocuments()
-        {
-            //201 items so we have 3 pages.
-            var insert = await _cosmosClient.UpsertDocuments(_movies.Take(201), (partial) => { Console.WriteLine($"upserted {partial.Count()} documents"); });
-
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
-        }
-
-        [TestMethod]
+     
+        //[TestMethod]
+        //[Priority(10)]
         public async Task Upsert5000CosmosDocuments()
         {
             var insert = await _cosmosClient.UpsertDocuments(_movies.Take(5000), (partial) => { Console.WriteLine($"upserted {partial.Count()} documents"); });

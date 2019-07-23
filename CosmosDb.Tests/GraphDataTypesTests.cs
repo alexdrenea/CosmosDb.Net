@@ -1,6 +1,4 @@
 using CosmosDb.Domain;
-using CosmosDb.Domain.Helpers;
-using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -19,6 +17,8 @@ namespace CosmosDb.Tests
         private static string CosmosGraphDocumentResponseString;
         private static string CosmosGraphGremlinResponseString;
 
+        private static string PartitionKeyPropertyName = "PartitionKey";
+
         [ClassInitialize]
         public static async Task Initialize(TestContext context)
         {
@@ -30,7 +30,7 @@ namespace CosmosDb.Tests
         public void GenerateGraphVertexFromModelWithAttributes()
         {
             var movie = Movie.GetTestModel("The Network");
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
@@ -39,7 +39,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
             if (!movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document missing ReleaseDate property");
             if (!movieGraph.ContainsKey("Runtime")) errors.Add("Document missing Runtime property");
@@ -55,7 +55,7 @@ namespace CosmosDb.Tests
             //Test values
             Assert.AreEqual(movie.MovieId, movieGraph["id"], "id not matching");
             Assert.AreEqual(movie.Label, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
@@ -72,7 +72,7 @@ namespace CosmosDb.Tests
         public void GenerateGraphVertexFromModelWithNoLabelAndId()
         {
             var movie = MovieNoLabelNoId.GetTestModel("The Network");
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
@@ -81,7 +81,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             //Since movieId is not maked as Label, it should be present in the output doc
             if (!movieGraph.ContainsKey("MovieId")) errors.Add("Document missing MovieId property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
@@ -97,7 +97,7 @@ namespace CosmosDb.Tests
             //Test values
             // Assert.AreEqual(movie.Id, movieGraph["id"], "id not matching"); -> id will be a guid
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
@@ -114,14 +114,14 @@ namespace CosmosDb.Tests
         public void GenerateGraphVertexFromModelWithNoPartitionKey()
         {
             var movie = MovieNoAttributes.GetTestModel("The Network");
-            SerializationHelpers.ToGraphVertex(movie);
+            CosmosEntitySerializer.Default.ToGraphVertex(movie);
         }
 
         [TestMethod]
         public void GenerateGraphVertexFromModelWithIgnoredProperties()
         {
             var movie = MovieIgnoredAttributes.GetTestModel("The Network");
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
@@ -130,7 +130,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
             if (movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document contains ignored ReleaseDate property");
             if (movieGraph.ContainsKey("Runtime")) errors.Add("Document contains ignored Runtime property");
@@ -145,7 +145,7 @@ namespace CosmosDb.Tests
             //Test values
             Assert.AreEqual(movie.MovieId, movieGraph["id"], "id not matching");
             Assert.AreEqual(movie.Label, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(movie.MovieId, movieGraph, "MovieId");
             AssertGraphProperty(movie.Title, movieGraph, "Title");
@@ -159,10 +159,10 @@ namespace CosmosDb.Tests
         {
             var movie = MovieNoAttributes.GetTestModel("The Network");
 
-            Assert.ThrowsException<Exception>(() => SerializationHelpers.ToGraphVertex(movie));
+            Assert.ThrowsException<Exception>(() => CosmosEntitySerializer.Default.ToGraphVertex(movie));
 
             //Using the
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie, exp => exp.Title) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie, exp => exp.Title) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
@@ -171,7 +171,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
             if (!movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document missing ReleaseDate property");
             if (!movieGraph.ContainsKey("Runtime")) errors.Add("Document missing Runtime property");
@@ -184,7 +184,7 @@ namespace CosmosDb.Tests
             //Test values
             // Assert.AreEqual(movie.Id, movieGraph["id"], "id not matching"); -> id will be a guid
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
@@ -200,7 +200,7 @@ namespace CosmosDb.Tests
         {
             var movie = MovieIllegalPropertyNames.GetTestModel("The Network");
 
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
             //Test that properties are present in the output document
@@ -208,7 +208,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
             if (!movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document missing ReleaseDate property");
             if (!movieGraph.ContainsKey("Runtime")) errors.Add("Document missing Runtime property");
@@ -222,7 +222,7 @@ namespace CosmosDb.Tests
             //Test values
             // Assert.AreEqual(movie.Id, movieGraph["id"], "id not matching"); -> id will be a guid
             Assert.AreEqual(movie.Label, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
@@ -238,10 +238,10 @@ namespace CosmosDb.Tests
         {
             var movie = MovieNoAttributes.GetTestModel("The Network");
 
-            Assert.ThrowsException<Exception>(() => SerializationHelpers.ToGraphVertex(movie));
+            Assert.ThrowsException<Exception>(() => CosmosEntitySerializer.Default.ToGraphVertex(movie));
 
             //Using the
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie, pkProperty: model => model.Title, idProp: model => movie.MovieId) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie, pkProperty: model => model.Title, idProp: model => movie.MovieId) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert to Graph Vertex");
 
@@ -250,7 +250,7 @@ namespace CosmosDb.Tests
 
             if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
             if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
-            if (!movieGraph.ContainsKey("PartitionKey")) errors.Add("Document missing PartitionKey property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
             if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
             if (!movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document missing ReleaseDate property");
             if (!movieGraph.ContainsKey("Runtime")) errors.Add("Document missing Runtime property");
@@ -263,7 +263,7 @@ namespace CosmosDb.Tests
             //Test values
             Assert.AreEqual(movie.MovieId, movieGraph["id"], "id not matching");
             Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
-            Assert.AreEqual(movie.Title, movieGraph["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(movie.Title, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
 
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Rating), movieGraph, "Rating");
             AssertGraphProperty(JsonConvert.SerializeObject(movie.Cast), movieGraph, "Cast");
@@ -287,17 +287,17 @@ namespace CosmosDb.Tests
             var cast = Cast.GetTestMovieCast(movieTitle);
             var movieRating = new MovieRatingEdge { SiteName = rating.SiteName };
 
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
-            var ratingGraph = SerializationHelpers.ToGraphVertex(rating) as IDictionary<string, object>;
-            var castGraph = SerializationHelpers.ToGraphVertex(cast) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
+            var ratingGraph = CosmosEntitySerializer.Default.ToGraphVertex(rating) as IDictionary<string, object>;
+            var castGraph = CosmosEntitySerializer.Default.ToGraphVertex(cast) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(ratingGraph, "Failed to convert rating to Graph Vertex");
             Assert.IsNotNull(castGraph, "Failed to convert cast to Graph Vertex");
 
             //Generate an edge 
-            var movieRatingEdgeSingle = SerializationHelpers.ToGraphEdge(movieRating, movie, rating, true) as IDictionary<string, object>;
-            var movieRatingEdgeSingle2 = SerializationHelpers.ToGraphEdge(movieRating, movie, rating, true) as IDictionary<string, object>;
+            var movieRatingEdgeSingle = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movie, rating, true) as IDictionary<string, object>;
+            var movieRatingEdgeSingle2 = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movie, rating, true) as IDictionary<string, object>;
             Assert.IsNotNull(movieRatingEdgeSingle, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieRatingEdgeSingle2, "Failed to convert movie to Graph Vertex");
             //Ensure all properties are present in the result
@@ -311,8 +311,8 @@ namespace CosmosDb.Tests
             //Ensure that 2 single edges have the same Ids
             Assert.AreEqual(movieRatingEdgeSingle["id"], movieRatingEdgeSingle2["id"], "Ids for 2 single edges should match");
 
-            var movieRatingEdgeMulti = SerializationHelpers.ToGraphEdge(movieRating, movie, rating, false) as IDictionary<string, object>;
-            var movieRatingEdgeMulti2 = SerializationHelpers.ToGraphEdge(movieRating, movie, rating, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movie, rating, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti2 = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movie, rating, false) as IDictionary<string, object>;
             Assert.IsNotNull(movieRatingEdgeMulti, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieRatingEdgeMulti2, "Failed to convert movie to Graph Vertex");
             //Ensure all properties are present in the result
@@ -335,15 +335,15 @@ namespace CosmosDb.Tests
             var cast = Cast.GetTestMovieCast(movieTitle);
             var movieCast = new MovieCastEdge { Order = cast.Order };
 
-            var movieGraph = SerializationHelpers.ToGraphVertex(movie) as IDictionary<string, object>;
-            var castGraph = SerializationHelpers.ToGraphVertex(cast) as IDictionary<string, object>;
+            var movieGraph = CosmosEntitySerializer.Default.ToGraphVertex(movie) as IDictionary<string, object>;
+            var castGraph = CosmosEntitySerializer.Default.ToGraphVertex(cast) as IDictionary<string, object>;
 
             Assert.IsNotNull(movieGraph, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(castGraph, "Failed to convert cast to Graph Vertex");
 
             //Generate an edge 
-            var movieCastEdgeSingle = SerializationHelpers.ToGraphEdge(movieCast, movie, cast, true) as IDictionary<string, object>;
-            var movieCastEdgeSingle2 = SerializationHelpers.ToGraphEdge(movieCast, movie, cast, true) as IDictionary<string, object>;
+            var movieCastEdgeSingle = CosmosEntitySerializer.Default.ToGraphEdge(movieCast, movie, cast, true) as IDictionary<string, object>;
+            var movieCastEdgeSingle2 = CosmosEntitySerializer.Default.ToGraphEdge(movieCast, movie, cast, true) as IDictionary<string, object>;
             Assert.IsNotNull(movieCastEdgeSingle, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieCastEdgeSingle2, "Failed to convert movie to Graph Vertex");
             //Ensure all properties are present in the result
@@ -357,8 +357,8 @@ namespace CosmosDb.Tests
             //Ensure that 2 single edges have the same Ids
             Assert.AreEqual(movieCastEdgeSingle["id"], movieCastEdgeSingle2["id"], "Ids for 2 single edges should match");
 
-            var movieRatingEdgeMulti = SerializationHelpers.ToGraphEdge(movieCast, movie, cast, false) as IDictionary<string, object>;
-            var movieRatingEdgeMulti2 = SerializationHelpers.ToGraphEdge(movieCast, movie, cast, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti = CosmosEntitySerializer.Default.ToGraphEdge(movieCast, movie, cast, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti2 = CosmosEntitySerializer.Default.ToGraphEdge(movieCast, movie, cast, false) as IDictionary<string, object>;
             Assert.IsNotNull(movieRatingEdgeMulti, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieRatingEdgeMulti2, "Failed to convert movie to Graph Vertex");
             //Ensure all properties are present in the result
@@ -382,8 +382,8 @@ namespace CosmosDb.Tests
             var movieRating = new MovieRatingEdge { SiteName = "SiteName" };
 
             //Generate a single edge 
-            var movieRatingEdgeSingle = SerializationHelpers.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, single: true) as IDictionary<string, object>;
-            var movieRatingEdgeSingle2 = SerializationHelpers.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, single: true) as IDictionary<string, object>;
+            var movieRatingEdgeSingle = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, single: true) as IDictionary<string, object>;
+            var movieRatingEdgeSingle2 = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, single: true) as IDictionary<string, object>;
             Assert.IsNotNull(movieRatingEdgeSingle, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieRatingEdgeSingle2, "Failed to convert movie to Graph Vertex");
 
@@ -400,8 +400,8 @@ namespace CosmosDb.Tests
 
 
             //Generate a multi edge
-            var movieRatingEdgeMulti1 = SerializationHelpers.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, false) as IDictionary<string, object>;
-            var movieRatingEdgeMulti2 = SerializationHelpers.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti1 = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, false) as IDictionary<string, object>;
+            var movieRatingEdgeMulti2 = CosmosEntitySerializer.Default.ToGraphEdge(movieRating, movieGraphItemBase, ratingItemBase, false) as IDictionary<string, object>;
             Assert.IsNotNull(movieRatingEdgeMulti1, "Failed to convert movie to Graph Vertex");
             Assert.IsNotNull(movieRatingEdgeMulti2, "Failed to convert movie to Graph Vertex");
             //Ensure all properties are present in the result
@@ -422,19 +422,19 @@ namespace CosmosDb.Tests
 
         private void AssertGraphEdgeValues(IDictionary<string, object> edge, IDictionary<string, object> source, IDictionary<string, object> dest)
         {
-            Assert.AreEqual(source["PartitionKey"], edge["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(source[PartitionKeyPropertyName], edge[PartitionKeyPropertyName], "partitionKey not matching");
 
             Assert.AreEqual(source["id"], edge["_vertexId"], "source vertex id not matching");
             Assert.AreEqual(source["label"], edge["_vertexLabel"], "source vertex label not matching");
 
             Assert.AreEqual(dest["id"], edge["_sink"], "destination vertex id not matching");
             Assert.AreEqual(dest["label"], edge["_sinkLabel"], "destination vertex label not matching");
-            Assert.AreEqual(dest["PartitionKey"], edge["_sinkPartition"], "destination vertex partitionKey not matching");
+            Assert.AreEqual(dest[PartitionKeyPropertyName], edge["_sinkPartition"], "destination vertex partitionKey not matching");
         }
 
         private void AssertGraphEdgeValues(IDictionary<string, object> edge, GraphItemBase source, GraphItemBase dest)
         {
-            Assert.AreEqual(source.PartitionKey, edge["PartitionKey"], "partitionKey not matching");
+            Assert.AreEqual(source.PartitionKey, edge[PartitionKeyPropertyName], "partitionKey not matching");
 
             Assert.AreEqual(source.Id, edge["_vertexId"], "source vertex id not matching");
             Assert.AreEqual(source.Label, edge["_vertexLabel"], "source vertex label not matching");
@@ -450,7 +450,7 @@ namespace CosmosDb.Tests
 
             if (!edge.ContainsKey("id")) errors.Add("Edge missing Id property");
             if (!edge.ContainsKey("label")) errors.Add("Edge missing Label property");
-            if (!edge.ContainsKey("PartitionKey")) errors.Add("Edge missing PartitionKey property");
+            if (!edge.ContainsKey(PartitionKeyPropertyName)) errors.Add("Edge missing PartitionKey property");
             if (!edge.ContainsKey("_isEdge")) errors.Add("Edge missing _isEdge property");
             if (!edge.ContainsKey("_vertexId")) errors.Add("Edge missing _vertexId property");
             if (!edge.ContainsKey("_vertexLabel")) errors.Add("Edge missing _vertexLabel property");
@@ -496,7 +496,7 @@ namespace CosmosDb.Tests
             var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphDocumentResponseString);
 
 
-            var doc = SerializationHelpers.FromGraphson<MovieFull>(graphDocJObject);
+            var doc = CosmosEntitySerializer.Default.FromGraphson<MovieFull>(graphDocJObject);
             //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
         }
 
@@ -507,7 +507,7 @@ namespace CosmosDb.Tests
             //Initialize Objects
             var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphGremlinResponseString);
 
-            var doc = SerializationHelpers.FromGraphson<MovieFull>(graphDocJObject);
+            var doc = CosmosEntitySerializer.Default.FromGraphson<MovieFull>(graphDocJObject);
             //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
 
         }

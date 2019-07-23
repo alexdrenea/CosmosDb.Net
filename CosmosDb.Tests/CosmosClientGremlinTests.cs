@@ -42,9 +42,11 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(1)]
+
         public async Task InsertVertex()
         {
-            var movie = _movies.First();
+            var movie = _movies.ElementAt(0);
 
             var insert = await _cosmosClient.InsertVertex(movie);
             Assert.IsTrue(insert.IsSuccessful);
@@ -59,6 +61,7 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
+        [Priority(2)]
         public async Task UpsertVertex()
         {
             var movie = _movies.ElementAt(1);
@@ -81,6 +84,37 @@ namespace CosmosDb.Tests
 
             Helpers.AssertMovieFullIsSame(movie, read2.Result);
 
+        }
+
+        [TestMethod]
+        [Priority(3)]
+        public async Task InsertManyCosmosvertices()
+        {
+            var insert = await _cosmosClient.InsertVertex(_movies.Skip(10).Take(100), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
+
+            var totalRu = insert.Sum(i => i.RequestCharge);
+            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+        }
+
+        [TestMethod]
+        [Priority(4)]
+        public async Task UpsertManyCosmosvertices()
+        {
+            var movies = _movies.Take(10);
+            var cast = movies.SelectMany(m => _cast[m.TmdbId]).ToList();
+
+            var upsertMovies = await _cosmosClient.UpsertVertex(movies, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
+            var upsertCast = await _cosmosClient.UpsertVertex(cast, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
+
+            var totalRu = upsertMovies.Sum(i => i.RequestCharge) + upsertCast.Sum(i => i.RequestCharge);
+            var totalTime = upsertMovies.Sum(i => i.ExecutionTime.TotalSeconds) + upsertCast.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            //TODO: is TotalSeconds correct?
+
+            Assert.IsTrue(upsertMovies.All(i => i.IsSuccessful));
+            Assert.IsTrue(upsertCast.All(i => i.IsSuccessful));
         }
 
         [TestMethod]
@@ -165,34 +199,6 @@ namespace CosmosDb.Tests
             Assert.IsTrue(read.IsSuccessful);
         }
 
-        [TestMethod]
-        public async Task InsertManyCosmosvertices()
-        {
-            var insert = await _cosmosClient.InsertVertex(_movies.Take(100), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
-
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
-        }
-
-        [TestMethod]
-        public async Task UpsertManyCosmosvertices()
-        {
-            var movies = _movies.Take(10);
-            var cast = movies.SelectMany(m => _cast[m.TmdbId]).ToList();
-
-            var upsertMovies = await _cosmosClient.UpsertVertex(movies, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
-            var upsertCast = await _cosmosClient.UpsertVertex(cast, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
-
-            var totalRu = upsertMovies.Sum(i => i.RequestCharge) + upsertCast.Sum(i => i.RequestCharge);
-            var totalTime = upsertMovies.Sum(i => i.ExecutionTime.TotalSeconds) + upsertCast.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            //TODO: is TotalSeconds correct?
-
-            Assert.IsTrue(upsertMovies.All(i => i.IsSuccessful));
-            Assert.IsTrue(upsertCast.All(i => i.IsSuccessful));
-        }
 
         //TODO: test some weird traversals .tree(), .path(), etc.
 

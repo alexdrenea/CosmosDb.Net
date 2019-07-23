@@ -8,38 +8,51 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace CosmosDb.Domain.Helpers
+namespace CosmosDb.Domain
 {
-    public static class SerializationHelpers
+    public class CosmosEntitySerializer
     {
-        //TODO: pass this in from the CosmosClient
-        private static string _partitionKeyPropertyName = "PartitionKey";
-
-        /// <summary>
-        /// Defines a set of attributes that mark properties that will be ignored during the object decomposition process.
-        /// </summary>
-        //private static string[] _ignoredPropertyAttributes = new[] { "PartitionKeyAttribute", "LabelAttribute", "IdAttribute", "JsonIgnoreAttribute", "IgnoreDataMemberAttribute" };
-        private static string[] _ignoredPropertyAttributes = new[] { "JsonIgnoreAttribute", "IgnoreDataMemberAttribute" };
-
-        internal enum KnownProperties
+        internal enum BaseProperties
         {
             Id,
             Label,
             PartitionKey,
         }
 
-        private static Dictionary<KnownProperties, string> _propertyNames = new Dictionary<KnownProperties, string>
-        {
-            { KnownProperties.Id, "id" },
-            { KnownProperties.Label, "label" },
-            { KnownProperties.PartitionKey, _partitionKeyPropertyName }
-        };
+        /// <summary>
+        /// Defines a set of attributes that mark properties that will be ignored during the object decomposition process.
+        /// If we add the cosmos attributes in that collection, then the output document will omit the properties that are marked with an attribute
+        /// i.e. if we mark Title as [Id] then Title will not exsit int he output document, only Id will.
+        /// Leaving those commented, means the output document will contain both Title and id properties. 
+        /// </summary>
+        private static string[] _ignoredPropertyAttributes = new[] { "JsonIgnoreAttribute", "IgnoreDataMemberAttribute" /*,"PartitionKeyAttribute"*/ /*,"LabelAttribute"*/ /*,"IdAttribute"*/ };
+
+
+        private readonly string _partitionKeyPropertyName = "PartitionKey";
+
+        private IReadOnlyDictionary<BaseProperties, string> _propertyNamesMap;
 
         /// <summary>
         /// Defines a set of properties that the convertes will add on to the result set as the default properties
         /// </summary>
-        private static string[] _ignoredPropertyNames = _propertyNames.Values.Select(p => p.ToLower()).ToArray();
+        private IEnumerable<string> _ignoredPropertyNames;
 
+        public CosmosEntitySerializer(string partitionKeyPropertyName = "PartitionKey")
+        {
+            _partitionKeyPropertyName = partitionKeyPropertyName;
+            _propertyNamesMap = new Dictionary<BaseProperties, string>
+            {
+                { BaseProperties.Id, "id" },
+                { BaseProperties.Label, "label" },
+                { BaseProperties.PartitionKey, _partitionKeyPropertyName }
+            };
+            _ignoredPropertyNames = _propertyNamesMap.Values.Select(p => p.ToLower()).ToArray();
+        }
+
+        /// <summary>
+        /// A static instance of the Serializer that uses the default 'PartitionKey' as the PartitionKeyPropertyname. 
+        /// </summary>
+        public static CosmosEntitySerializer Default => new CosmosEntitySerializer();
 
 
         /// <summary>
@@ -54,7 +67,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a cosmosDB document entry in a CosmosDB Graph collection
         /// </returns>
-        public static IDictionary<string, object> ToCosmosDocument<T>(this T entity)
+        public IDictionary<string, object> ToCosmosDocument<T>(T entity)
         {
             return GetObjectPropValues(entity);
         }
@@ -71,7 +84,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a cosmosDB document entry in a CosmosDB Graph collection
         /// </returns>
-        public static IDictionary<string, object> ToCosmosDocument<T>(this T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
+        public IDictionary<string, object> ToCosmosDocument<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
         {
             return GetObjectPropValues(entity, pkProperty, labelProp, idProp);
         }
@@ -92,7 +105,7 @@ namespace CosmosDb.Domain.Helpers
         /// <example>
         /// ToGraphVertex(entity, pkProperty: entity => entity.Title, labelProp: entity => entity.ItemType, idProp: entity => entity.EntityId) 
         /// </example>
-        public static IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
+        public IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
         {
             var vertexProps = GetObjectPropValues(data, pkProperty, labelProp, idProp);
             return ToGraphVertexInternal(vertexProps);
@@ -111,7 +124,7 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph vertex entry in a CosmosDB Graph collection
         /// </returns>
-        public static IDictionary<string, object> ToGraphVertex<T>(this T entity)
+        public IDictionary<string, object> ToGraphVertex<T>(T entity)
         {
             var vertexProps = GetObjectPropValues(entity);
             return ToGraphVertexInternal(vertexProps);
@@ -131,15 +144,15 @@ namespace CosmosDb.Domain.Helpers
         ///  }
         /// ]
         /// </summary>
-        private static IDictionary<string, object> ToGraphVertexInternal(IDictionary<string, object> vertexProps)
+        private IDictionary<string, object> ToGraphVertexInternal(IDictionary<string, object> vertexProps)
         {
             //https://docs.microsoft.com/en-us/azure/cosmos-db/gremlin-support
             // Cosmos does not support complex graph properties. Those need to be serialized as a string when encountered.
 
             var res = new Dictionary<string, object>();
-            res[_propertyNames[KnownProperties.Id]] = vertexProps[_propertyNames[KnownProperties.Id]].ToString();
-            res[_propertyNames[KnownProperties.Label]] = vertexProps[_propertyNames[KnownProperties.Label]].ToString();
-            res[_propertyNames[KnownProperties.PartitionKey]] = vertexProps[_partitionKeyPropertyName].ToString();
+            res[_propertyNamesMap[BaseProperties.Id]] = vertexProps[_propertyNamesMap[BaseProperties.Id]].ToString();
+            res[_propertyNamesMap[BaseProperties.Label]] = vertexProps[_propertyNamesMap[BaseProperties.Label]].ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = vertexProps[_partitionKeyPropertyName].ToString();
 
             foreach (var prop in vertexProps.Where(p => !_ignoredPropertyNames.Contains(p.Key.ToLower())))
             {
@@ -175,13 +188,13 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph edge entry in a CosmosDB Graph collection
         /// </returns>
-        public static IDictionary<string, object> ToGraphEdge<T, U, V>(this T entity, U source, V target, bool single = false)
+        public IDictionary<string, object> ToGraphEdge<T, U, V>(T entity, U source, V target, bool single = false)
         {
             var sourceProps = GetObjectPropValues(source, expandAllProps: false);
             var targetProps = GetObjectPropValues(target, expandAllProps: false);
 
-            var sourceGraphIemBase = new GraphItemBase { Id = sourceProps[_propertyNames[KnownProperties.Id]].ToString(), Label = sourceProps[_propertyNames[KnownProperties.Label]].ToString(), PartitionKey = sourceProps[_propertyNames[KnownProperties.PartitionKey]].ToString() };
-            var targetGraphIemBase = new GraphItemBase { Id = targetProps[_propertyNames[KnownProperties.Id]].ToString(), Label = targetProps[_propertyNames[KnownProperties.Label]].ToString(), PartitionKey = targetProps[_propertyNames[KnownProperties.PartitionKey]].ToString() };
+            var sourceGraphIemBase = new GraphItemBase { Id = sourceProps[_propertyNamesMap[BaseProperties.Id]].ToString(), Label = sourceProps[_propertyNamesMap[BaseProperties.Label]].ToString(), PartitionKey = sourceProps[_propertyNamesMap[BaseProperties.PartitionKey]].ToString() };
+            var targetGraphIemBase = new GraphItemBase { Id = targetProps[_propertyNamesMap[BaseProperties.Id]].ToString(), Label = targetProps[_propertyNamesMap[BaseProperties.Label]].ToString(), PartitionKey = targetProps[_propertyNamesMap[BaseProperties.PartitionKey]].ToString() };
 
             return ToGraphEdge<T>(entity, sourceGraphIemBase, targetGraphIemBase, single);
         }
@@ -199,14 +212,14 @@ namespace CosmosDb.Domain.Helpers
         /// <returns>
         /// dynamic object containing a key-value collection of a graph edge entry in a CosmosDB Graph collection
         /// </returns>
-        public static IDictionary<string, object> ToGraphEdge<T>(this T entity, GraphItemBase source, GraphItemBase target, bool single = false)
+        public IDictionary<string, object> ToGraphEdge<T>(T entity, GraphItemBase source, GraphItemBase target, bool single = false)
         {
             var entityProps = GetObjectPropValues(entity, allowEmptyPartitionKey: true, defaultId: single ? $"{source.Id}-{target.Id}" : null);
 
             var res = new Dictionary<string, object>();
-            res[_propertyNames[KnownProperties.Id]] = entityProps[_propertyNames[KnownProperties.Id]].ToString();
-            res[_propertyNames[KnownProperties.Label]] = entityProps[_propertyNames[KnownProperties.Label]].ToString();
-            res[_propertyNames[KnownProperties.PartitionKey]] = source.PartitionKey;
+            res[_propertyNamesMap[BaseProperties.Id]] = entityProps[_propertyNamesMap[BaseProperties.Id]].ToString();
+            res[_propertyNamesMap[BaseProperties.Label]] = entityProps[_propertyNamesMap[BaseProperties.Label]].ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = source.PartitionKey;
             res["_isEdge"] = true;
             res["_vertexId"] = source.Id;
             res["_vertexLabel"] = source.Label;
@@ -227,7 +240,7 @@ namespace CosmosDb.Domain.Helpers
         /// <summary>
         /// When reading a vertex from a graph database using either SQL or Gremlin.NET Api, we need to convert the incoming graphson result into the model.
         /// </summary>
-        public static T FromGraphson<T>(JObject document)
+        public T FromGraphson<T>(JObject document)
         {
             if (document == null) return default(T);
             var dataType = typeof(T);
@@ -293,7 +306,7 @@ namespace CosmosDb.Domain.Helpers
         /// If left null, and an ID property is not found on the object, will generate a GUID for id.
         /// If a label attribute is not present, a label property will be generated and its value will be the class name.
         /// </param>
-        private static IDictionary<string, object> GetObjectPropValues<T>(T entity, bool expandAllProps = true, bool allowEmptyPartitionKey = false, string defaultId = null)
+        private IDictionary<string, object> GetObjectPropValues<T>(T entity, bool expandAllProps = true, bool allowEmptyPartitionKey = false, string defaultId = null)
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
@@ -312,9 +325,9 @@ namespace CosmosDb.Domain.Helpers
 
             //TODO: Sanitize Base properties (id and pk)
 
-            res[_propertyNames[KnownProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
-            res[_propertyNames[KnownProperties.Id]] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? defaultId ?? Guid.NewGuid().ToString();
-            res[_propertyNames[KnownProperties.PartitionKey]] = pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
+            res[_propertyNamesMap[BaseProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
+            res[_propertyNamesMap[BaseProperties.Id]] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? defaultId ?? Guid.NewGuid().ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
 
             if (expandAllProps)
             {
@@ -328,7 +341,7 @@ namespace CosmosDb.Domain.Helpers
             return res;
         }
 
-        private static IDictionary<string, object> GetObjectPropValues<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null, bool expandAllProps = true)
+        private IDictionary<string, object> GetObjectPropValues<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null, bool expandAllProps = true)
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
@@ -336,9 +349,9 @@ namespace CosmosDb.Domain.Helpers
             if (pkProperty == null)
                 throw new Exception("PartitionKey property defined must be defined.");
 
-            res[_propertyNames[KnownProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.Name;
-            res[_propertyNames[KnownProperties.Id]] = dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
-            res[_propertyNames[KnownProperties.PartitionKey]] = dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
+            res[_propertyNamesMap[BaseProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.Name;
+            res[_propertyNamesMap[BaseProperties.Id]] = dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
 
             if (expandAllProps)
             {

@@ -1,6 +1,4 @@
-﻿using CosmosDb.Domain.Helpers;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -8,7 +6,6 @@ using System.Collections.Concurrent;
 using System.Threading;
 using CosmosDb.Domain;
 using Microsoft.Azure.Cosmos;
-using System.IO;
 using System.Linq;
 
 namespace CosmosDb
@@ -17,12 +14,13 @@ namespace CosmosDb
     {
         private const string SqlAccountEndpointFormat = "https://{0}.documents.azure.com:443/";
 
+        private string _partitionKeyPropertyName;
+
+        internal CosmosEntitySerializer CosmosSerializer { get; private set; }
+
         public CosmosClient Client { get; private set; }
         public Database Database { get; private set; }
         public Container Container { get; private set; }
-
-        protected string _partitionKeyPropertyName;
-
 
         #region Initialization
 
@@ -170,7 +168,7 @@ namespace CosmosDb
 
             var r = await container.ReadContainerAsync();
             res._partitionKeyPropertyName = r.Resource.PartitionKeyPath.Trim('/');
-
+            res.CosmosSerializer = new CosmosEntitySerializer(res._partitionKeyPropertyName);
             return res;
         }
 
@@ -184,7 +182,7 @@ namespace CosmosDb
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         public Task<CosmosResponse> InsertDocument<T>(T document)
         {
-            return InsertDocumentInternal(document.ToCosmosDocument());
+            return InsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document));
         }
 
         /// <summary>
@@ -212,7 +210,7 @@ namespace CosmosDb
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         public Task<CosmosResponse> UpsertDocument<T>(T document)
         {
-            return UpsertDocumentInternal(document.ToCosmosDocument());
+            return UpsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document));
         }
 
         /// <summary>

@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using CosmosDb.Domain;
-using CosmosDb.Domain.Helpers;
 using Gremlin.Net.Driver;
 using Gremlin.Net.Driver.Exceptions;
 using Gremlin.Net.Structure.IO.GraphSON;
@@ -26,6 +25,7 @@ namespace CosmosDb
         //Made this private so users aren't tempted to use methods from whithin the SqlClient directly.
         private CosmosClientSql CosmosSqlClient { get; set; }
 
+        private CosmosEntitySerializer CosmosSerializer;
 
         public GremlinServer GremlinServer { get; private set; }
 
@@ -57,7 +57,8 @@ namespace CosmosDb
             return new CosmosClientGraph
             {
                 GremlinServer = server,
-                CosmosSqlClient = sqlClient
+                CosmosSqlClient = sqlClient,
+                CosmosSerializer = sqlClient.CosmosSerializer,
             };
         }
 
@@ -67,14 +68,16 @@ namespace CosmosDb
         /// </summary>
         /// <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
+        /// <param name="partitionKeyPath">ParitionKey path for the container. Current implemetation only supports simple paths. Used in the deserialization process.</param>
         /// <returns>Reference to a Graph CosmosClient</returns>
-        public static ICosmosClientGraph GetClient(string accountName, string key, string databaseId, string containerId)
+        public static ICosmosClientGraph GetClient(string accountName, string key, string databaseId, string containerId, string partitionKeyPath = "/PartitionKey")
         {
             var gremlinEndpoint = string.Format(CosmosClientGraph.GraphEndpointFormat, accountName);
             var server = new GremlinServer(gremlinEndpoint, 443, username: "/dbs/" + databaseId + "/colls/" + containerId, enableSsl: true, password: key);
             return new CosmosClientGraph
             {
-                GremlinServer = server
+                GremlinServer = server,
+                CosmosSerializer = new CosmosEntitySerializer(partitionKeyPath.Trim('/'))
             };
         }
 
@@ -136,7 +139,7 @@ namespace CosmosDb
                     var graphResultString = JsonConvert.SerializeObject(graphResult);
                     var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString);
 
-                    var res = graphResultJObject.Select(SerializationHelpers.FromGraphson<T>).ToArray();
+                    var res = graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
 
                     return new CosmosResponse<IEnumerable<T>>
                     {
@@ -195,7 +198,7 @@ namespace CosmosDb
         public Task<CosmosResponse> InsertVertex<T>(T entity)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.InsertDocumentInternal(entity.ToGraphVertex<T>());
+            return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity));
         }
 
         /// <summary>
@@ -217,7 +220,7 @@ namespace CosmosDb
         {
             EnsureCosmosSqlClient();
             //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.InsertDocumentInternal(entity.ToGraphVertex<T>()); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, threads, reportingIntervalS);
         }
 
         /// <summary>
@@ -230,7 +233,7 @@ namespace CosmosDb
         public Task<CosmosResponse> UpsertVertex<T>(T entity)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.UpsertDocumentInternal(entity.ToGraphVertex<T>());
+            return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity));
         }
 
         /// <summary>
@@ -252,7 +255,7 @@ namespace CosmosDb
         {
             EnsureCosmosSqlClient();
             //Could've used UpserVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.UpsertDocumentInternal(entity.ToGraphVertex<T>()); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, threads, reportingIntervalS);
         }
 
 
@@ -274,7 +277,7 @@ namespace CosmosDb
         public Task<CosmosResponse> InsertEdge<T, U, V>(T edge, U source, V target, bool single = false)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.InsertDocumentInternal(SerializationHelpers.ToGraphEdge(edge, source, target, single));
+            return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
         /// <summary>
@@ -294,7 +297,7 @@ namespace CosmosDb
         public Task<CosmosResponse> UpsertEdge<T, U, V>(T edge, U source, V target, bool single = false)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.UpsertDocumentInternal(SerializationHelpers.ToGraphEdge(edge, source, target, single));
+            return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
         /// <summary>
@@ -315,7 +318,7 @@ namespace CosmosDb
         public Task<CosmosResponse> InsertEdge<T>(T edge, GraphItemBase source, GraphItemBase target, bool single = false)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.InsertDocumentInternal(SerializationHelpers.ToGraphEdge(edge, source, target, single));
+            return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
         /// <summary>
@@ -335,7 +338,7 @@ namespace CosmosDb
         public Task<CosmosResponse> UpsertEdge<T>(T edge, GraphItemBase source, GraphItemBase target, bool single = false)
         {
             EnsureCosmosSqlClient();
-            return CosmosSqlClient.UpsertDocumentInternal(SerializationHelpers.ToGraphEdge(edge, source, target, single));
+            return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
         /// <summary>
@@ -352,7 +355,7 @@ namespace CosmosDb
             if (!res.IsSuccessful)
                 return cosmosResult;
 
-            cosmosResult.Result = SerializationHelpers.FromGraphson<T>(res.Result);
+            cosmosResult.Result = CosmosSerializer.FromGraphson<T>(res.Result);
             return cosmosResult;
         }
 
@@ -377,7 +380,7 @@ namespace CosmosDb
             if (!res.IsSuccessful)
                 return cosmosResult;
 
-            cosmosResult.Result = res.Result.Select(SerializationHelpers.FromGraphson<T>).ToArray();
+            cosmosResult.Result = res.Result.Select(CosmosSerializer.FromGraphson<T>).ToArray();
 
             return cosmosResult;
         }
