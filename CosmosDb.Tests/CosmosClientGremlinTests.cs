@@ -34,8 +34,8 @@ namespace CosmosDb.Tests
 
             _movies = moviesCsv.Select(MovieFullGraph.GetMovieFullGraph).ToList();
             var moviesDic = _movies.ToDictionary(k => k.TmdbId);
-            _cast = castCsv.Select(c=> Cast.GetCastFromCsv(c, moviesDic[c.TmdbId].Title)).GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
-            
+            _cast = castCsv.Select(c => Cast.GetCastFromCsv(c, moviesDic[c.TmdbId].Title)).GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
+
             Assert.AreEqual(4802, moviesCsv.Count());
 
             _cosmosClient = await CosmosClientGraph.GetClientWithSql(accountName, accountKey, databaseId, containerId);

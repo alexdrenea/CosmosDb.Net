@@ -33,7 +33,6 @@ namespace CosmosDb
         public Database Database => CosmosSqlClient?.Database;
         public Container Container => CosmosSqlClient?.Container;
 
-
         #region Initialization
 
         /// <summary>
@@ -84,6 +83,13 @@ namespace CosmosDb
 
         #endregion
 
+        /// <summary>
+        /// Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.
+        /// </summary>
+        public GremlinClient GetGremlinClient()
+        {
+            return new GremlinClient(GremlinServer, new GraphSON2Reader(), new GraphSON2Writer(), GremlinClient.GraphSON2MimeType);
+        }
 
         #region Gremlin.NET calls  - pure graph
 
@@ -390,11 +396,7 @@ namespace CosmosDb
 
         #region Helpers
 
-        private GremlinClient GetGremlinClient()
-        {
-            return new GremlinClient(GremlinServer, new GraphSON2Reader(), new GraphSON2Writer(), GremlinClient.GraphSON2MimeType);
-        }
-
+      
         private void EnsureCosmosSqlClient()
         {
             if (CosmosSqlClient == null)

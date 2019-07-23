@@ -16,6 +16,11 @@ namespace CosmosDb
         Container Container { get; }
 
         /// <summary>
+        /// Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.
+        /// </summary>
+        GremlinClient GetGremlinClient();
+
+        /// <summary>
         /// Executes a Gremlin traversal and returns a singe result back.
         /// If the traversal returns more than 1 result, this method will return the first result only.
         /// When the type of the result is unknown (using steps like tree() or path(), send T as JObject and manually deserialize.
