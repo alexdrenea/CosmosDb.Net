@@ -9,20 +9,20 @@ namespace CosmosDb.Repl
     /// </summary>
     public class CosmosDbConfig
     {
-        private Lazy<CosmosSqlClient> _client;
-        private Lazy<ICosmosGraphClient> _graphClient;
+        private Lazy<ICosmosClientSql> _client;
+        private Lazy<ICosmosClientGraph> _graphClient;
 
         public CosmosDbConfig()
         {
-            _client  = new Lazy<CosmosSqlClient>(
+            _client  = new Lazy<ICosmosClientSql>(
                 () =>
                 {
-                    return CosmosSqlClient.GetCosmosDbClient(ConnectionString, Database, Collection, forceCreate: true).GetAwaiter().GetResult();
+                    return CosmosClientSql.GetByConnectionString(ConnectionString, Database, Collection, forceCreate: true).GetAwaiter().GetResult();
                 });
-            _graphClient = new Lazy<ICosmosGraphClient>(
+            _graphClient = new Lazy<ICosmosClientGraph>(
                () =>
                {
-                   return CosmosGraphClient.GetCosmosGraphClientWithSql(AccountName, AuthKey, Database, Collection, forceCreate: false).GetAwaiter().GetResult();
+                   return CosmosClientGraph.GetClientWithSql(AccountName, AuthKey, Database, Collection, forceCreate: false).GetAwaiter().GetResult();
                });
         }
 
@@ -33,7 +33,7 @@ namespace CosmosDb.Repl
         public string Database { get; set; }
         public string Collection { get; set; }
         
-        public Lazy<CosmosSqlClient> Client { get { return _client; } }
-        public Lazy<ICosmosGraphClient> GraphClient { get { return _graphClient; } }
+        public Lazy<ICosmosClientSql> Client { get { return _client; } }
+        public Lazy<ICosmosClientGraph> GraphClient { get { return _graphClient; } }
     }
 }

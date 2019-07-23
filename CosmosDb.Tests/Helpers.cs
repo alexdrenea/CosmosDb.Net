@@ -26,6 +26,23 @@ namespace CosmosDb.Tests
         }
 
 
+        public static void AssertMovieFullIsSame(MovieFullGraph expected, MovieFullGraph actual)
+        {
+            Assert.AreEqual(expected.TmdbId, actual.TmdbId, "Id not matching");
+            Assert.AreEqual(expected.Title, actual.Title, "Title not matching");
+            Assert.AreEqual(expected.Tagline, actual.Tagline, "Tagline not matching");
+            Assert.AreEqual(expected.Runtime, actual.Runtime, "Runtime not matching");
+            Assert.AreEqual(expected.Revenue, actual.Revenue, "Revenue not matching");
+            Assert.AreEqual(expected.ReleaseDate, actual.ReleaseDate, "ReleaseDate not matching");
+            Assert.AreEqual(expected.Overview, actual.Overview, "Overview not matching");
+            Assert.AreEqual(expected.Language, actual.Language, "Language not matching");
+            Assert.AreEqual(expected.Keywords.Count(), actual.Keywords.Count(), "Keywords not matching");
+            Assert.AreEqual(expected.Genres.Count(), actual.Genres.Count(), "Genres not matching");
+            Assert.AreEqual(expected.Format, actual.Format, "Format not matching");
+            Assert.AreEqual(expected.Budget, actual.Budget, "Budget not matching");
+            AssertRatingIsSame(expected.Rating, actual.Rating);
+        }
+
         public static void AssertMovieFullIsSame(MovieFull expected, MovieFull actual)
         {
             Assert.AreEqual(expected.TmdbId, actual.TmdbId, "Id not matching");
@@ -36,8 +53,8 @@ namespace CosmosDb.Tests
             Assert.AreEqual(expected.ReleaseDate, actual.ReleaseDate, "ReleaseDate not matching");
             Assert.AreEqual(expected.Overview, actual.Overview, "Overview not matching");
             Assert.AreEqual(expected.Language, actual.Language, "Language not matching");
-            Assert.AreEqual(expected.Keywords, actual.Keywords, "Keywords not matching");
-            Assert.AreEqual(expected.Genres, actual.Genres, "Genres not matching");
+            Assert.AreEqual(expected.Keywords.Count(), actual.Keywords.Count(), "Keywords not matching");
+            Assert.AreEqual(expected.Genres.Count(), actual.Genres.Count(), "Genres not matching");
             Assert.AreEqual(expected.Format, actual.Format, "Format not matching");
             Assert.AreEqual(expected.Budget, actual.Budget, "Budget not matching");
             Assert.AreEqual(expected.Cast.Count, actual.Cast.Count, "Cast not matching");

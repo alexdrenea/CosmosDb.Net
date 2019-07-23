@@ -222,6 +222,7 @@ namespace CosmosDb.Tests.TestData.Models
         }
     }
 
+   
     /// <summary>
     /// A more detailed movie model that represents a movie based on the sample data present in the testing suite.
     /// To be used for performance tests for inserting a lot of documents.
@@ -242,8 +243,8 @@ namespace CosmosDb.Tests.TestData.Models
         public long Revenue { get; set; }
 
         public string Language { get; set; }
-        public string Genres { get; set; }
-        public string Keywords { get; set; }
+        public List<string> Genres { get; set; }
+        public List<string> Keywords { get; set; }
 
         public Rating Rating { get; set; }
 
@@ -256,9 +257,56 @@ namespace CosmosDb.Tests.TestData.Models
             {
                 TmdbId = movieCsv.TmdbId,
                 Budget = movieCsv.Budget,
-                Cast = cast.Select(c => new Cast { MovieTitle = movieCsv.Title, Character = c.Character, Name = c.Name, Order = c.Order, Uncredited = c.Uncredited }).ToList(),
-                Genres = movieCsv.Genres,
-                Keywords = movieCsv.Keywords,
+                Cast = cast?.Select(c => new Cast { MovieTitle = movieCsv.Title, Character = c.Character, Name = c.Name, Order = c.Order, Uncredited = c.Uncredited }).ToList(),
+                Genres = movieCsv.Genres.Split(';').ToList(),
+                Keywords = movieCsv.Keywords.Split(';').ToList(),
+                Language = movieCsv.Language,
+                Overview = movieCsv.Overview,
+                Rating = new Rating { SiteName = "TvDB", MaxRating = 5, AvgRating = movieCsv.Rating, Votes = movieCsv.Votes },
+                ReleaseDate = movieCsv.ReleaseDate,
+                Revenue = movieCsv.Revenue,
+                Runtime = movieCsv.Runtime,
+                Tagline = movieCsv.Tagline,
+                Title = movieCsv.Title
+            };
+        }
+    }
+
+    /// <summary>
+    /// A more detailed movie model that represents a movie based on the sample data present in the testing suite.
+    /// To be used for performance tests for inserting a lot of documents.
+    /// </summary>
+    public class MovieFullGraph
+    {
+        [Id]
+        public string TmdbId { get; set; }
+        [PartitionKey]
+        public string Title { get; set; }
+        public string Tagline { get; set; }
+        public string Overview { get; set; }
+
+        public DateTime ReleaseDate { get; set; }
+
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public long Revenue { get; set; }
+
+        public string Language { get; set; }
+        public List<string> Genres { get; set; }
+        public List<string> Keywords { get; set; }
+
+        public Rating Rating { get; set; }
+
+        public MovieFormat Format { get; set; }
+
+        public static MovieFullGraph GetMovieFullGraph(MovieCsv movieCsv)
+        {
+            return new MovieFullGraph
+            {
+                TmdbId = movieCsv.TmdbId,
+                Budget = movieCsv.Budget,
+                Genres = movieCsv.Genres.Split(';').ToList(),
+                Keywords = movieCsv.Keywords.Split(';').ToList(),
                 Language = movieCsv.Language,
                 Overview = movieCsv.Overview,
                 Rating = new Rating { SiteName = "TvDB", MaxRating = 5, AvgRating = movieCsv.Rating, Votes = movieCsv.Votes },
