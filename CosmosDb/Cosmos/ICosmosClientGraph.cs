@@ -174,7 +174,7 @@ namespace CosmosDb
         /// </summary>
         /// <returns><see cref="CosmosResponse"/> that encapsulates the result of the query and tracks success status along with various performance parameters.</returns>
         Task<CosmosResponse<T>> ReadVertex<T>(string docId, string partitionKey);
-        
+
         /// <summary>
         /// Execute a SQL statement against the graph database.
         /// Forward the request to the SQL Client with a JObject type and then convert the resulting graphson documents into our entity using the serialization helper.

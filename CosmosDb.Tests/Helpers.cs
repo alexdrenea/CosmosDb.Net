@@ -64,8 +64,8 @@ namespace CosmosDb.Tests
         public static void AssertCastIsSame(Cast expected, Cast actual)
         {
             Assert.AreEqual(expected.MovieTitle, actual.MovieTitle, "MovieTitle not matching");
-            Assert.AreEqual(expected.Id, actual.Id, "Id not matching");
-            Assert.AreEqual(expected.Name, actual.Name, "Name not matching");
+            //Assert.AreEqual(expected.Id, actual.Id, "Id not matching");
+            Assert.AreEqual(expected.ActorName, actual.ActorName, "Actor Name not matching");
             Assert.AreEqual(expected.Character, actual.Character, "Character not matching");
             Assert.AreEqual(expected.Order, actual.Order, "Order not matching");
             Assert.AreEqual(expected.Uncredited, actual.Uncredited, "Uncredited not matching");

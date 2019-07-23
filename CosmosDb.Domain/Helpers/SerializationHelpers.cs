@@ -216,7 +216,7 @@ namespace CosmosDb.Domain.Helpers
 
             foreach (var prop in entityProps.Where(p => !_ignoredPropertyNames.Contains(p.Key.ToLower())))
             {
-                //TODO - either throw an exception or handle the complex properties case.
+                //TODO: Handle complex types. Either throw an exception or handle it correctly
                 res[prop.Key] = prop.Value;
             }
 
@@ -309,6 +309,8 @@ namespace CosmosDb.Domain.Helpers
                 throw new Exception("More than 1 Label property defined.");
             if (idProp.Count() > 1)
                 throw new Exception("More than 1 Id property defined.");
+
+            //TODO: Sanitize Base properties (id and pk)
 
             res[_propertyNames[KnownProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
             res[_propertyNames[KnownProperties.Id]] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? defaultId ?? Guid.NewGuid().ToString();

@@ -1,11 +1,28 @@
 ﻿using CosmosDb.Domain;
 using Microsoft.Azure.Cosmos;
 using System;
+using System.Collections.Generic;
 
 namespace CosmosDb
 {
     public static class Helpers
     {
+        public static T GetValueOrDefault<T>(IReadOnlyDictionary<string, object> dictionary, string key)
+        {
+            if (dictionary.ContainsKey(key))
+            {
+                try
+                {
+                    return (T)Convert.ChangeType(dictionary[key], typeof(T));
+                }
+                catch
+                {
+                    return default(T);
+                }
+            }
+            return default(T);
+        }
+
         public static CosmosResponse<T> ToCosmosResponse<T>(this CosmosException exception)
         {
             return new CosmosResponse<T>()

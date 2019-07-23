@@ -47,7 +47,7 @@ namespace CosmosDb
         /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
         /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.</exception>
         /// <returns>Reference to a Graph CosmosClient</returns>
-        public static async Task<ICosmosClientGraph> GetClientWithSql(string accountName, string key, string databaseId, string containerId,  int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
+        public static async Task<ICosmosClientGraph> GetClientWithSql(string accountName, string key, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
         {
             var sqlClient = (CosmosClientSql)(await CosmosDb.CosmosClientSql.GetByAccountName(accountName, key, databaseId, containerId, initialContainerRUs, partitionKeyPath, forceCreate));
 
@@ -142,7 +142,7 @@ namespace CosmosDb
                     {
                         Result = res,
                         StatusCode = System.Net.HttpStatusCode.OK,
-                        RequestCharge = GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
+                        RequestCharge = Helpers.GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
                         ExecutionTime = DateTime.Now.Subtract(start)
                     };
                 }
@@ -153,9 +153,9 @@ namespace CosmosDb
                 {
                     Result = null,
                     Error = e,
-                    RequestCharge = GetValueOrDefault<double>(e.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
-                    RetryAfter = TimeSpan.FromMilliseconds(GetValueOrDefault<int>(e.StatusAttributes, RESULTSET_ATTRIBUTE_RETRYAFTER)),
-                    ActivityId = GetValueOrDefault<string>(e.StatusAttributes, RESULTSET_ATTRIBUTE_ACTIVITYID),
+                    RequestCharge = Helpers.GetValueOrDefault<double>(e.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
+                    RetryAfter = TimeSpan.FromMilliseconds(Helpers.GetValueOrDefault<int>(e.StatusAttributes, RESULTSET_ATTRIBUTE_RETRYAFTER)),
+                    ActivityId = Helpers.GetValueOrDefault<string>(e.StatusAttributes, RESULTSET_ATTRIBUTE_ACTIVITYID),
                 };
             }
             catch (Exception e)
@@ -169,7 +169,18 @@ namespace CosmosDb
             }
         }
 
-        //TODO: Fluent API
+
+        //TODO: Fluent API -> when CosmosDB gets bytecode support
+        //public GraphTraversalSource GetGraphTraversalSource()
+        //{
+        //    using (var gremlinClient = GetGremlinClient())
+        //    {
+        //        var start = DateTime.Now;
+        //        var g = AnonymousTraversalSource.Traversal().WithRemote(new DriverRemoteConnection(gremlinClient));
+        //        return g;
+        //    }
+        //}
+
         #endregion
 
         #region CosmosSQL calls - calls into a CosmosDB Graph using SQL API
@@ -379,23 +390,6 @@ namespace CosmosDb
         private GremlinClient GetGremlinClient()
         {
             return new GremlinClient(GremlinServer, new GraphSON2Reader(), new GraphSON2Writer(), GremlinClient.GraphSON2MimeType);
-        }
-
-        private static T GetValueOrDefault<T>(IReadOnlyDictionary<string, object> dictionary, string key)
-        {
-            if (dictionary.ContainsKey(key))
-            {
-                try
-                {
-                    return (T)Convert.ChangeType(dictionary[key], typeof(T));
-                }
-                catch
-                {
-                    return default(T);
-                }
-            }
-
-            return default(T);
         }
 
         private void EnsureCosmosSqlClient()

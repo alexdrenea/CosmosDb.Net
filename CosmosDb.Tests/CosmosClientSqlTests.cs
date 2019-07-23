@@ -11,18 +11,19 @@ namespace CosmosDb.Tests
     [TestClass]
     public class CosmosClientSqlTests
     {
-        private static string accountName = "mlsdatabasesql";
-        private static string accountKey = "YdpG8nEhoeSXZjHoD9d4h4UJUEFyLJu89PqM7zqm9EBHjF6FXedA2nKAZTqmhJ7zcGHzJAv2WC3BnNXNBl9yJg==";
+        private static string accountName = "ce9d2c52-0ee0-4-231-b9ee";
+        private static string accountKey = "nZ2SR6nHDwgUhIGkSNzsach88932gVle9HQ2Sj8Kng0KhvcBBWEQ5EmVDhCXnTq5FPcKQ8R4gM9068wcehPy9A==";
 
         private static string accountEndpoint = $"https://{accountName}.documents.azure.com:443/";
         private static string connectionString = $"AccountEndpoint={accountEndpoint};AccountKey={accountKey};";
-        private static string databaseId = "test";
-        private static string containerId = "test2";
+        private static string databaseId = "core";
+        private static string containerId = "test1";
 
 
         private static string moviesTestDataPath = "TestData/Samples/movies_lite.csv";
         private static string castTestDataPath = "TestData/Samples/movies_cast_lite.csv";
 
+        private static List<MovieFull> _moviesWithCast;
         private static List<MovieFull> _movies;
         private static ICosmosClientSql _cosmosClient;
 
@@ -30,8 +31,10 @@ namespace CosmosDb.Tests
         public static async Task Initialize(TestContext context)
         {
             var moviesCsv = Helpers.GetFromCsv<MovieCsv>(moviesTestDataPath);
-            var castCsv = Helpers.GetFromCsv<CastCsv>(castTestDataPath).GroupBy(k => k.TmdbId).ToDictionary(k => k.Key, v => v.ToList());
-            //_movies = moviesCsv.Select(m => MovieFull.GetMovieFull(m, castCsv.ContainsKey(m.TmdbId) ? castCsv[m.TmdbId] : new List<CastCsv>())).ToList();
+            var castCsv = Helpers.GetFromCsv<CastCsv>(castTestDataPath);
+
+            var cast = castCsv.GroupBy(k => k.TmdbId).ToDictionary(k => k.Key, v => v.ToList());
+            _moviesWithCast = moviesCsv.Select(m => MovieFull.GetMovieFull(m, cast.ContainsKey(m.TmdbId) ? cast[m.TmdbId] : new List<CastCsv>())).ToList();
             //Don't add Cast into the movie document - testing performance vs graph
             _movies = moviesCsv.Select(m => MovieFull.GetMovieFull(m, new List<CastCsv>())).ToList();
 

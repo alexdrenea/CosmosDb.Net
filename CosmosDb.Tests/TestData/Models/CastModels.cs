@@ -1,4 +1,5 @@
 ﻿using CosmosDb.Attributes;
+using System;
 
 namespace CosmosDb.Tests.TestData.Models
 {
@@ -8,8 +9,11 @@ namespace CosmosDb.Tests.TestData.Models
         public string Id => $"{MovieTitle}-{Order}";
 
         [PartitionKey]
+        public string ActorName { get; set; }
+
         public string MovieTitle { get; set; }
-        public string Name { get; set; }
+        public string MovieId { get; set; }
+
         public string Character { get; set; }
         public int Order { get; set; }
         public bool Uncredited { get; set; }
@@ -18,11 +22,25 @@ namespace CosmosDb.Tests.TestData.Models
         {
             return new Cast
             {
+                MovieId = (new Random()).Next(1000).ToString(),
                 MovieTitle = title,
                 Order = 0,
                 Uncredited = false,
                 Character = $"{title}-character",
-                Name = $"{title}-name",
+                ActorName = $"{title}-name",
+            };
+        }
+
+        public static Cast GetCastFromCsv(CastCsv castCsv, string movieTitle)
+        {
+            return new Cast
+            {
+                MovieTitle = movieTitle,
+                MovieId = castCsv.TmdbId,
+                ActorName = castCsv.Name,
+                Character = castCsv.Character,
+                Order = castCsv.Order,
+                Uncredited = castCsv.Uncredited,
             };
         }
     }

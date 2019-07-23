@@ -257,7 +257,7 @@ namespace CosmosDb.Tests.TestData.Models
             {
                 TmdbId = movieCsv.TmdbId,
                 Budget = movieCsv.Budget,
-                Cast = cast?.Select(c => new Cast { MovieTitle = movieCsv.Title, Character = c.Character, Name = c.Name, Order = c.Order, Uncredited = c.Uncredited }).ToList(),
+                Cast = cast?.Select(c => Models.Cast.GetCastFromCsv(c, movieCsv.Title)).ToList() ?? new List<Cast>(),
                 Genres = movieCsv.Genres.Split(';').ToList(),
                 Keywords = movieCsv.Keywords.Split(';').ToList(),
                 Language = movieCsv.Language,

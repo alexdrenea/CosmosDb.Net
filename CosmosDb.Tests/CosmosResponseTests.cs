@@ -16,9 +16,8 @@ namespace CosmosDb.Tests
         {
         }
 
-
-        //TODO: test to see that CosmosResponse has all properties
-        //TODO: test to see in case of exception that cosmos Response is valid
+        //TODO: test to validate that CosmosResponse has all properties
+        //TODO: test to validate CosmosResponse built from CosmosExcepion
         //TODO: test for Clone<> operations
     }
 }

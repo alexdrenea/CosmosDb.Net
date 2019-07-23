@@ -1,3 +1,4 @@
+using CosmosDb.Domain;
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,29 +12,33 @@ namespace CosmosDb.Tests
     [TestClass]
     public class CosmosClientGremlinTests
     {
-        private static string cosmosGraphConnectionString = "f0887a1a-0ee0-4-231-b9ee";
-        private static string cosmosGraphAccountKey = "whnySIy325FgHd9h6iex6i0IRZ0QsJYRlmAjzURFD468TPYuh4jA9DfUFwNfXReJq85S54pUnxXJknWFczQvNw==";
+        private static string accountName = "f0887a1a-0ee0-4-231-b9ee";
+        private static string accountKey = "whnySIy325FgHd9h6iex6i0IRZ0QsJYRlmAjzURFD468TPYuh4jA9DfUFwNfXReJq85S54pUnxXJknWFczQvNw==";
+
+        private static string databaseId = "core";
+        private static string containerId = "test1";
+
         private static string moviesTestDataPath = "TestData/Samples/movies_lite.csv";
         private static string castTestDataPath = "TestData/Samples/movies_cast_lite.csv";
 
 
-        private static List<MovieCsv> _moviesCsv;
-        private static Dictionary<string, List<CastCsv>> _castCsv;
         private static List<MovieFullGraph> _movies;
-
+        private static Dictionary<string, List<Cast>> _cast;
         private static ICosmosClientGraph _cosmosClient;
 
         [ClassInitialize]
         public static async Task Initialize(TestContext context)
         {
             var moviesCsv = Helpers.GetFromCsv<MovieCsv>(moviesTestDataPath);
-            var castCsv = Helpers.GetFromCsv<CastCsv>(castTestDataPath).GroupBy(k => k.TmdbId).ToDictionary(k => k.Key, v => v.ToList());
-            _movies = moviesCsv.Select(MovieFullGraph.GetMovieFullGraph).ToList();
+            var castCsv = Helpers.GetFromCsv<CastCsv>(castTestDataPath);
 
+            _movies = moviesCsv.Select(MovieFullGraph.GetMovieFullGraph).ToList();
+            var moviesDic = _movies.ToDictionary(k => k.TmdbId);
+            _cast = castCsv.Select(c=> Cast.GetCastFromCsv(c, moviesDic[c.TmdbId].Title)).GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
+            
             Assert.AreEqual(4802, moviesCsv.Count());
 
-            _cosmosClient = await CosmosClientGraph.GetClientWithSql(cosmosGraphConnectionString, cosmosGraphAccountKey, "core", "test1");
-            var x = (CosmosClientGraph)_cosmosClient;
+            _cosmosClient = await CosmosClientGraph.GetClientWithSql(accountName, accountKey, databaseId, containerId);
         }
 
         [TestMethod]
@@ -161,7 +166,7 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
-        public async Task Insert100Cosmosvertices()
+        public async Task InsertManyCosmosvertices()
         {
             var insert = await _cosmosClient.InsertVertex(_movies.Take(100), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
 
@@ -172,21 +177,104 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
-        public async Task Upsert100Cosmosvertices()
+        public async Task UpsertManyCosmosvertices()
         {
-            var insert = await _cosmosClient.UpsertVertex(_movies.Take(100), (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
+            var movies = _movies.Take(10);
+            var cast = movies.SelectMany(m => _cast[m.TmdbId]).ToList();
 
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+            var upsertMovies = await _cosmosClient.UpsertVertex(movies, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
+            var upsertCast = await _cosmosClient.UpsertVertex(cast, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
 
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+            var totalRu = upsertMovies.Sum(i => i.RequestCharge) + upsertCast.Sum(i => i.RequestCharge);
+            var totalTime = upsertMovies.Sum(i => i.ExecutionTime.TotalSeconds) + upsertCast.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            //TODO: is TotalSeconds correct?
+
+            Assert.IsTrue(upsertMovies.All(i => i.IsSuccessful));
+            Assert.IsTrue(upsertCast.All(i => i.IsSuccessful));
         }
 
         //TODO: test some weird traversals .tree(), .path(), etc.
 
-        //TODO test edges
-        //TODO: test insert edge with single: true (throw exception if you try to insert another time)
-         
-        //TODO: test insett edge with single: false (can insert multiple)
+        [TestMethod]
+        public async Task InsertEdgeSingleWithVertexReference()
+        {
+            var movie = _movies.ElementAt(0);
+            var cast = _cast[movie.TmdbId];
+            var cast1 = cast.ElementAt(0);
+
+            var edge = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, movie, cast1, single: true);
+            Assert.IsTrue(edge.IsSuccessful);
+
+            var testEdge = await _cosmosClient.ExecuteGremlinSingle<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdge.IsSuccessful);
+            Helpers.AssertCastIsSame(cast1, testEdge.Result);
+
+            var edge2 = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, movie, cast1, single: true);
+            Assert.IsFalse(edge2.IsSuccessful);
+        }
+
+        [TestMethod]
+        public async Task InsertEdgeMultiWithVertexReference()
+        {
+            var movie = _movies.ElementAt(1);
+            var cast = _cast[movie.TmdbId];
+            var cast1 = cast.ElementAt(0);
+
+            var edge = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, movie, cast1, single: false);
+            Assert.IsTrue(edge.IsSuccessful);
+
+            var testEdge = await _cosmosClient.ExecuteGremlinSingle<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdge.IsSuccessful);
+            Helpers.AssertCastIsSame(cast1, testEdge.Result);
+
+            var edge2 = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, movie, cast1, single: false);
+            Assert.IsTrue(edge2.IsSuccessful);
+
+            var testEdges = await _cosmosClient.ExecuteGremlin<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdges.IsSuccessful);
+            Assert.AreEqual(2, testEdges.Result.Count());
+        }
+
+        [TestMethod]
+        public async Task InsertEdgeSingleWithGraphItemBase()
+        {
+            var movie = _movies.ElementAt(2);
+            var cast = _cast[movie.TmdbId];
+            var cast1 = cast.ElementAt(0);
+
+            var edge = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, new GraphItemBase(movie.TmdbId, movie.Title, movie.GetType().Name), new GraphItemBase(cast1.Id, cast1.ActorName, cast1.GetType().Name), single: true);
+            Assert.IsTrue(edge.IsSuccessful);
+
+            var testEdge = await _cosmosClient.ExecuteGremlinSingle<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdge.IsSuccessful);
+            Helpers.AssertCastIsSame(cast1, testEdge.Result);
+
+            var edge2 = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, new GraphItemBase(movie.TmdbId, movie.Title, movie.GetType().Name), new GraphItemBase(cast1.Id, cast1.ActorName, cast1.GetType().Name), single: true);
+            Assert.IsFalse(edge2.IsSuccessful);
+        }
+
+        [TestMethod]
+        public async Task InsertEdgeMultiWithGraphItemBase()
+        {
+            var movie = _movies.ElementAt(3);
+            var cast = _cast[movie.TmdbId];
+            var cast1 = cast.ElementAt(0);
+
+            var edge = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, new GraphItemBase(movie.TmdbId, movie.Title, movie.GetType().Name), new GraphItemBase(cast1.Id, cast1.ActorName, cast1.GetType().Name), single: false);
+            Assert.IsTrue(edge.IsSuccessful);
+
+            var testEdge = await _cosmosClient.ExecuteGremlinSingle<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdge.IsSuccessful);
+            Helpers.AssertCastIsSame(cast1, testEdge.Result);
+
+            var edge2 = await _cosmosClient.InsertEdge(new MovieCastEdge() { Order = cast1.Order }, new GraphItemBase(movie.TmdbId, movie.Title, movie.GetType().Name), new GraphItemBase(cast1.Id, cast1.ActorName, cast1.GetType().Name), single: false);
+            Assert.IsTrue(edge2.IsSuccessful);
+
+            var testEdges = await _cosmosClient.ExecuteGremlin<Cast>($"g.V().hasId('{movie.TmdbId}').out()");
+            Assert.IsTrue(testEdges.IsSuccessful);
+            Assert.AreEqual(2, testEdges.Result.Count());
+        }
+
     }
 }

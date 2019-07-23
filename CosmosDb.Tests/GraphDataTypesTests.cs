@@ -420,7 +420,6 @@ namespace CosmosDb.Tests
 
 
 
-
         private void AssertGraphEdgeValues(IDictionary<string, object> edge, IDictionary<string, object> source, IDictionary<string, object> dest)
         {
             Assert.AreEqual(source["PartitionKey"], edge["PartitionKey"], "partitionKey not matching");

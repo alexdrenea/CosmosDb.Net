@@ -342,7 +342,7 @@ namespace CosmosDb
             }
         }
 
-        //TODO- support for cancellation token?
+        //TODO: Add Support for cancellation token
         internal async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, int threads = 4, int reportingIntervalS = 10)
         {
             ConcurrentBag<CosmosResponse> cb = new ConcurrentBag<CosmosResponse>();
