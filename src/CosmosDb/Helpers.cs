@@ -3,8 +3,6 @@ using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 
-//TODO: add sample project.
-
 namespace CosmosDb
 {
     public static class Helpers
