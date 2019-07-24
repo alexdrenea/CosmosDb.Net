@@ -9,7 +9,8 @@ using System.Threading.Tasks;
 
 namespace CosmosDb.Tests
 {
-    //[TestClass]
+    [TestClass]
+    [Ignore("Don't run on CI since it requries a conection to a CosmosDB. Update account name and key and run locally only")]
     public class CosmosClientGremlinTests
     {
         private static string accountName = "f0887a1a-0ee0-4-231-b9ee";

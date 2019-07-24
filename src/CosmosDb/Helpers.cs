@@ -3,8 +3,6 @@ using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 
-//TODO: Write Proper nuspec
-//TODO: Folder shuffle to use src, tests , sample pattern
 //TODO: add sample project.
 
 namespace CosmosDb
