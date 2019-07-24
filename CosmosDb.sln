@@ -3,13 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28902.138
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Repl", "CosmosDb.Repl\CosmosDb.Repl.csproj", "{82BF4A3C-888F-4322-9D71-24418BEB2FF9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb", "src\CosmosDb\CosmosDb.csproj", "{34ADFD09-F98B-41C2-AB3F-E541512411C7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Domain", "CosmosDb.Domain\CosmosDb.Domain.csproj", "{B4FFA915-199A-4F76-A0B8-4550EFC583E2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Domain", "src\CosmosDb.Domain\CosmosDb.Domain.csproj", "{B586C2CB-CA8D-4265-9ACA-538C136E9D55}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb", "CosmosDb\CosmosDb.csproj", "{22789553-39B3-4629-B6D6-592C2A42A612}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CosmosDb.Tests", "CosmosDb.Tests\CosmosDb.Tests.csproj", "{AD65BDE9-852C-4598-BC43-B3F798495125}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Tests", "tests\CosmosDb.Tests\CosmosDb.Tests.csproj", "{D8FB9183-B739-4D94-80A5-3311C5F390F6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,22 +15,18 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{82BF4A3C-888F-4322-9D71-24418BEB2FF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{82BF4A3C-888F-4322-9D71-24418BEB2FF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{82BF4A3C-888F-4322-9D71-24418BEB2FF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{82BF4A3C-888F-4322-9D71-24418BEB2FF9}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B4FFA915-199A-4F76-A0B8-4550EFC583E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B4FFA915-199A-4F76-A0B8-4550EFC583E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B4FFA915-199A-4F76-A0B8-4550EFC583E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B4FFA915-199A-4F76-A0B8-4550EFC583E2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{22789553-39B3-4629-B6D6-592C2A42A612}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{22789553-39B3-4629-B6D6-592C2A42A612}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{22789553-39B3-4629-B6D6-592C2A42A612}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{22789553-39B3-4629-B6D6-592C2A42A612}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AD65BDE9-852C-4598-BC43-B3F798495125}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AD65BDE9-852C-4598-BC43-B3F798495125}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AD65BDE9-852C-4598-BC43-B3F798495125}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AD65BDE9-852C-4598-BC43-B3F798495125}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34ADFD09-F98B-41C2-AB3F-E541512411C7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34ADFD09-F98B-41C2-AB3F-E541512411C7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34ADFD09-F98B-41C2-AB3F-E541512411C7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34ADFD09-F98B-41C2-AB3F-E541512411C7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B586C2CB-CA8D-4265-9ACA-538C136E9D55}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B586C2CB-CA8D-4265-9ACA-538C136E9D55}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B586C2CB-CA8D-4265-9ACA-538C136E9D55}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B586C2CB-CA8D-4265-9ACA-538C136E9D55}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8FB9183-B739-4D94-80A5-3311C5F390F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8FB9183-B739-4D94-80A5-3311C5F390F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8FB9183-B739-4D94-80A5-3311C5F390F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8FB9183-B739-4D94-80A5-3311C5F390F6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

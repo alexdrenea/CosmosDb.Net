@@ -108,6 +108,8 @@ namespace CosmosDb
         /// <summary>
         /// Insert an edge into the database by providing the Edge domain model and references to its source and target as domain models
         /// This call uses the SQL API to insert the edge as a document.
+        /// WARNING: If Source or Target vertex do not define an ID property (gets a GUID automatically) DO NOT use single: true
+        /// because when trying to generate the edge ID, you will get a new ID for the source or target vertex.
         /// </summary>
         /// <param name="edge">Edge entity to insert</param>
         /// <param name="source">Source vertex of the edge</param>

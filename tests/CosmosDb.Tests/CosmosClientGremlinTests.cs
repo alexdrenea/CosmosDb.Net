@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace CosmosDb.Tests
 {
-    [TestClass]
+    //[TestClass]
     public class CosmosClientGremlinTests
     {
         private static string accountName = "f0887a1a-0ee0-4-231-b9ee";

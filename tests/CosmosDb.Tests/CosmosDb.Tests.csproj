@@ -40,8 +40,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CosmosDb.Domain\CosmosDb.Domain.csproj" />
-    <ProjectReference Include="..\CosmosDb\CosmosDb.csproj" />
+    <ProjectReference Include="..\..\src\CosmosDb.Domain\CosmosDb.Domain.csproj" />
+    <ProjectReference Include="..\..\src\CosmosDb\CosmosDb.csproj" />
   </ItemGroup>
 
 </Project>

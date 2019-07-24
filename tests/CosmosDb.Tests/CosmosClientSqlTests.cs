@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace CosmosDb.Tests
 {
-    [TestClass]
+    //[TestClass]
     public class CosmosClientSqlTests
     {
         private static string accountName = "ce9d2c52-0ee0-4-231-b9ee";

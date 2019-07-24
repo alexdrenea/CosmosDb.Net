@@ -3,13 +3,19 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <PackageVersion>0.0.1-local-prerelease</PackageVersion>
-    <Authors>AlexDrenea</Authors>
-    <Description>Wrappers for various CosmosDB operations</Description>
+    <Authors>Alex Drenea</Authors>
+    <Description>
+      Wrapper library over the official Microsoft Azure Cosmos DB .NET Client library and the Gremlin.NET driver.
+    </Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Copyright>AlexDrenea 2018</Copyright>
-    <PackageReleaseNotes>Initial Release</PackageReleaseNotes>
-    <PackageLicenseUrl></PackageLicenseUrl>
+    <Copyright>© 2017-2019 Alex Drenea</Copyright>
+    <PackageReleaseNotes>Update library to use Cosmos.NET SDK v3.0 and Gremlin.NET 3.4.2</PackageReleaseNotes>
+    <PackageLicenseUrl>https://licenses.nuget.org/MIT</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/alexdrenea/CosmosDB.NET</PackageProjectUrl>
+    <PackageIconUrl></PackageIconUrl>
+    <RepositoryType>Git</RepositoryType>
+    <RepositoryUrl>https://github.com/alexdrenea/CosmosDB.NET</RepositoryUrl>
+    <PackageTags>Azure CosmosDB Cosmos Gremlin Graph SQL</PackageTags>  
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -23,11 +29,6 @@
     <DocumentationFile>\bin\Release\netstandard2.0\CosmosDb.xml</DocumentationFile>
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Cosmos\CosmosClient_original.cs" />
-    <Compile Remove="Cosmos\CosmosGraphClient_original.cs" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Gremlin.Net" Version="3.4.2" />
