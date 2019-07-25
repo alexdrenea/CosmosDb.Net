@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.4</TargetFramework>
+    <PackageVersion>0.0.1-local</PackageVersion>
+    <Authors>Alex Drenea</Authors>
+    <Copyright>© 2017-2019 Alex Drenea</Copyright>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseUrl>https://licenses.nuget.org/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/alexdrenea/CosmosDB.NET</PackageProjectUrl>
+    <RepositoryType>Git</RepositoryType>
+    <RepositoryUrl>https://github.com/alexdrenea/CosmosDB.NET</RepositoryUrl>
+    <PackageTags>Azure CosmosDB Cosmos Gremlin Graph SQL</PackageTags>
+  
+    <Description>
+      Wrapper library over the official Microsoft Azure Cosmos DB .NET Client library and the Gremlin.NET driver.
+      This package is a dependency free reference to be used in your Domain library. 
+      Provides Annotation Attributes and the Serialization Helper.
+    </Description>
+    <PackageReleaseNotes>
+      Updated and optimized Serialization Helper.
+    </PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+  </ItemGroup>
+
+</Project>

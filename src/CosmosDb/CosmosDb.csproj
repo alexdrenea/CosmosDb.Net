@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageVersion>0.0.1-local-prerelease</PackageVersion>
+    <Authors>Alex Drenea</Authors>
+    <Description>
+      Wrapper library over the official Microsoft Azure Cosmos DB .NET Client library and the Gremlin.NET driver.
+      Provides seamless integraition of the Gremlin and SQL APIs for a optimized and fast Graph database experience.
+    </Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>© 2017-2019 Alex Drenea</Copyright>
+    <PackageReleaseNotes>Update library to use Cosmos.NET SDK v3.0 and Gremlin.NET 3.4.2</PackageReleaseNotes>
+    <PackageLicenseUrl>https://licenses.nuget.org/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/alexdrenea/CosmosDB.NET</PackageProjectUrl>
+    <PackageIconUrl></PackageIconUrl>
+    <RepositoryType>Git</RepositoryType>
+    <RepositoryUrl>https://github.com/alexdrenea/CosmosDB.NET</RepositoryUrl>
+    <PackageTags>Azure CosmosDB Cosmos Gremlin Graph SQL</PackageTags>  
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <DocumentationFile>\bin\Debug\netstandard2.0\CosmosDb.xml</DocumentationFile>
+    <OutputPath></OutputPath>
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <OutputPath></OutputPath>
+    <DocumentationFile>\bin\Release\netstandard2.0\CosmosDb.xml</DocumentationFile>
+    <NoWarn>1701;1702;1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gremlin.Net" Version="3.4.2" />
+    <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="System.Threading.Tasks.Dataflow" Version="4.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CosmosDb.Domain\CosmosDb.Domain.csproj" />
+  </ItemGroup>
+
+</Project>
