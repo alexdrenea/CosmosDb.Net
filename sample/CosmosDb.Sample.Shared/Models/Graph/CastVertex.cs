@@ -1,5 +1,4 @@
-﻿using CosmosDb.Sample.Shared.Models.Csv;
-using System;
+﻿using CosmosDb.Attributes;
 
 namespace CosmosDb.Sample.Shared.Models.Graph
 {

@@ -1,4 +1,6 @@
-﻿namespace CosmosDb.Sample.Shared.Models.Graph
+﻿using CosmosDb.Attributes;
+
+namespace CosmosDb.Sample.Shared.Models.Graph
 {
     public class KeywordVertex
     {

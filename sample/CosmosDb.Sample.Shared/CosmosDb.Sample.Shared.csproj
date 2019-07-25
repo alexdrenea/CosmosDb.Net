@@ -6,6 +6,7 @@
 
 
   <ItemGroup>
+    <PackageReference Include="CosmosDb.Domain" Version="3.0.1" />
     <PackageReference Include="CsvHelper" Version="12.1.2" />
   </ItemGroup>
   
