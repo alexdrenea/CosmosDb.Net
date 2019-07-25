@@ -6,6 +6,7 @@
     <Authors>Alex Drenea</Authors>
     <Description>
       Wrapper library over the official Microsoft Azure Cosmos DB .NET Client library and the Gremlin.NET driver.
+      Provides seamless integraition of the Gremlin and SQL APIs for a optimized and fast Graph database experience.
     </Description>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <Copyright>© 2017-2019 Alex Drenea</Copyright>
