@@ -54,6 +54,20 @@ namespace CosmosDb.Domain
         /// </summary>
         public static CosmosEntitySerializer Default => new CosmosEntitySerializer();
 
+        /// <summary>
+        /// Returns a GraphItemBase object (id, label, pk) for a given entity that is annotated with the needed attributes.
+        /// </summary>
+        /// <param name="entity">entity to extract GraphItemBase object from</param>
+        public GraphItemBase ToGraphItemBase<T>(T entity)
+        {
+            var props = GetObjectPropValues(entity, expandAllProps: false);
+            return new GraphItemBase
+            {
+                Id = props[_propertyNamesMap[BaseProperties.Id]].ToString(),
+                Label = props[_propertyNamesMap[BaseProperties.Label]].ToString(),
+                PartitionKey = props[_propertyNamesMap[BaseProperties.PartitionKey]].ToString()
+            };
+        }
 
         /// <summary>
         /// Converts a given entity to a dynamic representation that can be used to insert the document in the database as a CosmosDB Document
@@ -174,7 +188,6 @@ namespace CosmosDb.Domain
             return res;
         }
 
-
         /// <summary>
         /// Converts a given entity to a dynamic representation that can be used to insert the document in the database as a Graph Edge.
         /// The entity does not need to have any annotations, everything will be inherited from the vertices it connects.
@@ -190,13 +203,7 @@ namespace CosmosDb.Domain
         /// </returns>
         public IDictionary<string, object> ToGraphEdge<T, U, V>(T entity, U source, V target, bool single = false)
         {
-            var sourceProps = GetObjectPropValues(source, expandAllProps: false);
-            var targetProps = GetObjectPropValues(target, expandAllProps: false);
-
-            var sourceGraphIemBase = new GraphItemBase { Id = sourceProps[_propertyNamesMap[BaseProperties.Id]].ToString(), Label = sourceProps[_propertyNamesMap[BaseProperties.Label]].ToString(), PartitionKey = sourceProps[_propertyNamesMap[BaseProperties.PartitionKey]].ToString() };
-            var targetGraphIemBase = new GraphItemBase { Id = targetProps[_propertyNamesMap[BaseProperties.Id]].ToString(), Label = targetProps[_propertyNamesMap[BaseProperties.Label]].ToString(), PartitionKey = targetProps[_propertyNamesMap[BaseProperties.PartitionKey]].ToString() };
-
-            return ToGraphEdge<T>(entity, sourceGraphIemBase, targetGraphIemBase, single);
+            return ToGraphEdge<T>(entity, ToGraphItemBase(source), ToGraphItemBase(target), single);
         }
 
         /// <summary>
@@ -302,7 +309,7 @@ namespace CosmosDb.Domain
         /// <returns>sanitized value</returns>
         public static string SanitizeValue(string value)
         {
-            if (string.IsNullOrEmpty(value)) return string.Empty;
+            if (string.IsNullOrEmpty(value)) return null;
 
             //TODO: a sanitization metod can be used to convert raw values for id and pk into friendlier version.
             //i.e. create slug, trim, toLower().

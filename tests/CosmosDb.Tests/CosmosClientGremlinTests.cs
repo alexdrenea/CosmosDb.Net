@@ -21,9 +21,10 @@ namespace CosmosDb.Tests
         private static string databaseId = "core";
         private static string containerId = "test1";
 
+        private static int MOVIES_TO_TEST = 50; // number of movies to take from the sample dataset when running the tests.
+
         private static string moviesTestDataPath = "TestData/Samples/movies_lite.csv";
         private static string castTestDataPath = "TestData/Samples/movies_cast_lite.csv";
-
 
         private static List<MovieFullGraph> _movies;
         private static Dictionary<string, List<Cast>> _cast;
@@ -65,9 +66,21 @@ namespace CosmosDb.Tests
 
         [TestMethod]
         [Priority(2)]
+        public async Task InsertManyVertices()
+        {
+            var insert = await _cosmosClient.InsertVertex(_movies.Skip(1).Take(MOVIES_TO_TEST), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
+
+            var totalRu = insert.Sum(i => i.RequestCharge);
+            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+        }
+
+        [TestMethod]
+        [Priority(3)]
         public async Task UpsertVertex()
         {
-            var movie = _movies.ElementAt(1);
+            var movie = _movies.ElementAt(0);
 
             var upsert = await _cosmosClient.UpsertVertex(movie);
 
@@ -90,22 +103,10 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
-        [Priority(3)]
-        public async Task InsertManyCosmosvertices()
-        {
-            var insert = await _cosmosClient.InsertVertex(_movies.Skip(10).Take(100), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
-
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
-        }
-
-        [TestMethod]
         [Priority(4)]
-        public async Task UpsertManyCosmosvertices()
+        public async Task UpsertManyVertices()
         {
-            var movies = _movies.Take(10);
+            var movies = _movies.Take(MOVIES_TO_TEST);
             var cast = movies.SelectMany(m => _cast[m.TmdbId]).ToList();
 
             var upsertMovies = await _cosmosClient.UpsertVertex(movies, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
@@ -285,6 +286,15 @@ namespace CosmosDb.Tests
             Assert.AreEqual(2, testEdges.Result.Count());
         }
 
+        [TestMethod]
+        public async Task UpsertMultipleEdges()
+        {
+            var movies = _movies.Take(MOVIES_TO_TEST).ToDictionary(k => k.TmdbId);
+            var cast = movies.SelectMany(m => _cast[m.Key]).ToList();
+
+            var edges = cast.Select(c => new EdgeDefinition(new MovieCastEdge() { Order = c.Order }, _cosmosClient.CosmosSerializer.ToGraphItemBase(movies[c.MovieId]), _cosmosClient.CosmosSerializer.ToGraphItemBase(c), true)).ToList();
+            var upsertEdges = await _cosmosClient.UpsertEdges(edges, (partial) => { Console.WriteLine($"upserted {partial.Count()} edges"); });
+        }
 
 
 

@@ -223,7 +223,7 @@ namespace CosmosDb
         /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
         /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
-        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosSqlClient"/>.</exception>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
         /// await _client.InsertVertex(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices");
@@ -258,7 +258,7 @@ namespace CosmosDb
         /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
         /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
-        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosSqlClient"/>.</exception>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
         /// await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
@@ -355,13 +355,51 @@ namespace CosmosDb
             return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
-
-        public Task<IEnumerable<CosmosResponse>> InsertEdge(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        /// <summary>
+        /// Insert multiple edges into the database using a TPL Dataflow block.
+        /// This call uses the SQL API to insert the edges as a document.
+        /// </summary>
+        /// <param name="edges">Edges to insert</param>
+        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        public Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
         {
             EnsureCosmosSqlClient();
             
             //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
             return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, threads, reportingIntervalS);
+        }
+
+
+        /// <summary>
+        /// Upsert (Insert or Update) multiple edges into the database using a TPL Dataflow block.
+        /// This call uses the SQL API to upsert the edges as a document.
+        /// </summary>
+        /// <param name="edges">Edges to upsert</param>
+        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        public Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            EnsureCosmosSqlClient();
+
+            //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
+            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, threads, reportingIntervalS);
         }
 
 
