@@ -15,7 +15,7 @@ namespace CosmosDb.Tests
         private static string PartitionKeyPropertyName = "PartitionKey";
 
         [ClassInitialize]
-        public static async Task Initialize(TestContext context)
+        public static void Initialize(TestContext context)
         {
         }
 
@@ -304,6 +304,5 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.ReleaseDate, movieGraph["ReleaseDate"], "ReleaseDate not matching");
             Assert.AreEqual(movie.Runtime, movieGraph["Runtime"], "Runtime not matching");
         }
-
     }
 }

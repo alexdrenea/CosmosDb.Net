@@ -12,7 +12,7 @@ namespace CosmosDb.Tests
     public class CosmosResponseTests
     {
         [ClassInitialize]
-        public static async Task Initialize(TestContext context)
+        public static void Initialize(TestContext context)
         {
         }
 

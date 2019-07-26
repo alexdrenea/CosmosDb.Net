@@ -9,7 +9,9 @@ using System.Threading.Tasks;
 namespace CosmosDb.Tests
 {
     [TestClass]
+#if !DEBUG
     [Ignore("Don't run on CI since it requries a conection to a CosmosDB. Update account name and key and run locally only")]
+#endif
     public class CosmosClientSqlTests
     {
         private static string accountName = "ce9d2c52-0ee0-4-231-b9ee";
@@ -34,7 +36,7 @@ namespace CosmosDb.Tests
             var moviesCsv = Helpers.GetFromCsv<MovieCsv>(moviesTestDataPath);
             var castCsv = Helpers.GetFromCsv<CastCsv>(castTestDataPath);
 
-            var cast = castCsv.GroupBy(k => k.TmdbId).ToDictionary(k => k.Key, v => v.ToList());
+            var cast = castCsv.GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
             _moviesWithCast = moviesCsv.Select(m => MovieFull.GetMovieFull(m, cast.ContainsKey(m.TmdbId) ? cast[m.TmdbId] : new List<CastCsv>())).ToList();
             //Don't add Cast into the movie document - testing performance vs graph
             _movies = moviesCsv.Select(m => MovieFull.GetMovieFull(m, new List<CastCsv>())).ToList();
@@ -203,5 +205,60 @@ namespace CosmosDb.Tests
             Assert.IsTrue(insert.All(i => i.IsSuccessful));
         }
 
+
+        [TestMethod]
+        [Priority(100)]
+        public async Task TestIdInvalidIdCharacters()
+        {
+            //https://docs.microsoft.com/en-us/dotnet/api/microsoft.azure.documents.resource.id?redirectedfrom=MSDN&view=azure-dotnet#overloads
+            var good = new TestModel { Id = "good-id", Pk = "good-partition" };
+            var withSpace = new TestModel { Id = "id with space", Pk = "good-partition" };
+            var withSlash = new TestModel { Id = "id-with-/", Pk = "good-partition" };
+            var withBackslash = new TestModel { Id = "id-with-\\", Pk = "good-partition" };
+            var withHash = new TestModel { Id = "id-with-#", Pk = "good-partition" };
+            var withDollar = new TestModel { Id = "id-with-$", Pk = "good-partition" };
+
+            var insertGood = await _cosmosClient.UpsertDocument(good);
+            var insertwithSpace = await _cosmosClient.UpsertDocument(withSpace);
+            var insertwithSlash = await _cosmosClient.UpsertDocument(withSlash);
+            var insertwithBackslash = await _cosmosClient.UpsertDocument(withBackslash);
+            var insertwithHash = await _cosmosClient.UpsertDocument(withHash);
+            var insertwithDollar = await _cosmosClient.UpsertDocument(withDollar);
+
+            Assert.IsTrue(insertGood.IsSuccessful);
+            Assert.IsTrue(insertwithSpace.IsSuccessful);
+            Assert.IsTrue(insertwithSlash.IsSuccessful);
+            Assert.IsTrue(insertwithBackslash.IsSuccessful);
+            Assert.IsTrue(insertwithHash.IsSuccessful);
+            Assert.IsTrue(insertwithDollar.IsSuccessful);
+        }
+
+
+        [TestMethod]
+        [Priority(100)]
+        public async Task TestIdInvalidPkCharacters()
+        {
+            //https://docs.microsoft.com/en-us/dotnet/api/microsoft.azure.documents.resource.id?redirectedfrom=MSDN&view=azure-dotnet#overloads
+            var good = new TestModel { Id = "good-id", Pk = "good-partition" };
+            var withSpace = new TestModel { Id = "good-id", Pk = "partition with space" };
+            var withSlash = new TestModel { Id = "good-id", Pk = "good-partition-with-/" };
+            var withBackslash = new TestModel { Id = "good-id", Pk = "good-partitionwith-\\" };
+            var withHash = new TestModel { Id = "good-id", Pk = "good-partition-with-#" };
+            var withDollar = new TestModel { Id = "good-id", Pk = "good-partition-with-$" };
+
+            var insertGood = await _cosmosClient.UpsertDocument(good);
+            var insertwithSpace = await _cosmosClient.UpsertDocument(withSpace);
+            var insertwithSlash = await _cosmosClient.UpsertDocument(withSlash);
+            var insertwithBackslash = await _cosmosClient.UpsertDocument(withBackslash);
+            var insertwithHash = await _cosmosClient.UpsertDocument(withHash);
+            var insertwithDollar = await _cosmosClient.UpsertDocument(withDollar);
+
+            Assert.IsTrue(insertGood.IsSuccessful);
+            Assert.IsTrue(insertwithSpace.IsSuccessful);
+            Assert.IsTrue(insertwithSlash.IsSuccessful);
+            Assert.IsTrue(insertwithBackslash.IsSuccessful);
+            Assert.IsTrue(insertwithHash.IsSuccessful);
+            Assert.IsTrue(insertwithDollar.IsSuccessful);
+        }
     }
 }

@@ -14,7 +14,12 @@ using Newtonsoft.Json.Linq;
 
 namespace CosmosDb
 {
-    public class CosmosClientGraph : ICosmosClientGraph
+    /// <summary>
+    /// Wrapper class around the Azure.Comsos.CosmosClient class as well as the Gremlin.NET driver to be used when connecting to a CosmosDB Graph Database
+    /// Exposes all upstream SDK objects: <see cref="CosmosClient"/>, <see cref="Database"/> for direct access to base functionality 
+    /// Exposes methods for both Gremlin and SQL operations to be executed against the connection.
+    /// </summary>
+    public class CosmosClientGraph : ICosmosClientGraph, IDisposable
     {
         private const string GraphEndpointFormat = "{0}.gremlin.cosmosdb.azure.com";
         private const string RESULTSET_ATTRIBUTE_RU = "x-ms-total-request-charge";
@@ -25,7 +30,7 @@ namespace CosmosDb
         //Made this private so users aren't tempted to use methods from whithin the SqlClient directly.
         private CosmosClientSql CosmosSqlClient { get; set; }
 
-        private CosmosEntitySerializer CosmosSerializer;
+        public CosmosEntitySerializer CosmosSerializer { get; private set; }
 
         public GremlinServer GremlinServer { get; private set; }
 
@@ -41,6 +46,8 @@ namespace CosmosDb
         /// </summary>
         /// <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
+        /// <param name="databaseId">Name of the Database to connect to.</param>
+        /// <param name="containerId">Name of the Container to connect to.</param>
         /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
         /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
         /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
@@ -67,6 +74,8 @@ namespace CosmosDb
         /// </summary>
         /// <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
+        /// <param name="databaseId">Name of the Database to connect to.</param>
+        /// <param name="containerId">Name of the Container to connect to.</param>
         /// <param name="partitionKeyPath">ParitionKey path for the container. Current implemetation only supports simple paths. Used in the deserialization process.</param>
         /// <returns>Reference to a Graph CosmosClient</returns>
         public static ICosmosClientGraph GetClient(string accountName, string key, string databaseId, string containerId, string partitionKeyPath = "/PartitionKey")
@@ -135,7 +144,6 @@ namespace CosmosDb
         /// <returns>CosmosResponse wrapped Array of results.</returns>
         public async Task<CosmosResponse<IEnumerable<T>>> ExecuteGremlin<T>(string queryString, Dictionary<string, object> bindings = null)
         {
-
             try
             {
                 using (var gremlinClient = GetGremlinClient())
@@ -347,6 +355,16 @@ namespace CosmosDb
             return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edge, source, target, single));
         }
 
+
+        public Task<IEnumerable<CosmosResponse>> InsertEdge(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        {
+            EnsureCosmosSqlClient();
+            
+            //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
+            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, threads, reportingIntervalS);
+        }
+
+
         /// <summary>
         /// Read a graph vertex using the SQL API. 
         /// Forward the request to the SQL Client with a JObject type and then convert the resulting graphson document into our entity using the serialization helper.
@@ -394,9 +412,32 @@ namespace CosmosDb
 
         #endregion
 
+        /// <summary>
+        /// Dispose of cosmos client
+        /// </summary>
+        public void Dispose()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Dispose of cosmos client
+        /// </summary>
+        /// <param name="disposing">True if disposing</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (this.CosmosSqlClient != null)
+            {
+                this.CosmosSqlClient.Dispose();
+                this.CosmosSqlClient = null;
+            }
+        }
+
+
         #region Helpers
 
-      
+
         private void EnsureCosmosSqlClient()
         {
             if (CosmosSqlClient == null)

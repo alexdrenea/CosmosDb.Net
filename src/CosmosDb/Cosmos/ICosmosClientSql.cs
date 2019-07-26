@@ -13,7 +13,7 @@ namespace CosmosDb
         CosmosClient Client { get; }
         Database Database { get; }
         Container Container { get; }
-
+        CosmosEntitySerializer CosmosSerializer { get; }
 
         /// <summary>
         /// Insert a document into the database.
@@ -21,7 +21,7 @@ namespace CosmosDb
         /// <param name="document">Entity to insert</param>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         Task<CosmosResponse> InsertDocument<T>(T document);
-      
+
         /// <summary>
         /// Insert multiple documents into the database using a TPL Dataflow block.
         /// </summary>
@@ -43,7 +43,7 @@ namespace CosmosDb
         /// <param name="document">Entity to update</param>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         Task<CosmosResponse> UpsertDocument<T>(T document);
-     
+
         /// <summary>
         /// Upsert (Insert or Update) multiple documents into the database using a TPL Dataflow block.
         /// </summary>

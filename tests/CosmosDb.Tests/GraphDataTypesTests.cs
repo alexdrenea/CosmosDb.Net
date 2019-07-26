@@ -20,7 +20,7 @@ namespace CosmosDb.Tests
         private static string PartitionKeyPropertyName = "PartitionKey";
 
         [ClassInitialize]
-        public static async Task Initialize(TestContext context)
+        public static void Initialize(TestContext context)
         {
             CosmosGraphDocumentResponseString = File.ReadAllText("TestData/CosmosResponses/CosmosGraphDocumentResponse.json");
             CosmosGraphGremlinResponseString = File.ReadAllText("TestData/CosmosResponses/CosmosGraphGremlinResponse.json");
@@ -494,9 +494,8 @@ namespace CosmosDb.Tests
             //Initialize Objects
             var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphDocumentResponseString);
 
-
             var doc = CosmosEntitySerializer.Default.FromGraphson<MovieFull>(graphDocJObject);
-            //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
+            //NO assert needed. FromGraphson throws exception if it cannot convert to T.
         }
 
 
@@ -507,8 +506,7 @@ namespace CosmosDb.Tests
             var graphDocJObject = JsonConvert.DeserializeObject<JObject>(CosmosGraphGremlinResponseString);
 
             var doc = CosmosEntitySerializer.Default.FromGraphson<MovieFull>(graphDocJObject);
-            //TODO: have some asserts, but essentially if this method succeeded, we should be fine.
-
+            //NO assert needed. FromGraphson throws exception if it cannot convert to T.
         }
     }
 }

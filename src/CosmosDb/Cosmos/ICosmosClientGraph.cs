@@ -14,6 +14,7 @@ namespace CosmosDb
         CosmosClient Client { get; }
         Database Database { get; }
         Container Container { get; }
+        CosmosEntitySerializer CosmosSerializer { get; }
 
         /// <summary>
         /// Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.

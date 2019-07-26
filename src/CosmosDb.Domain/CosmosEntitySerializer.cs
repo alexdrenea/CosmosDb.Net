@@ -286,12 +286,28 @@ namespace CosmosDb.Domain
                     }
                     catch (Exception e)
                     {
-                        //can't set value - will default to type default
+                        throw new Exception($"Can't set value '{value}' to property '{dataProp.Name}'. Error: {e.Message}");
                     }
                 }
             }
 
             return entity;
+        }
+
+
+        /// <summary>
+        /// Sanitizes a value for it to become valid as a PartitionKey or ID.
+        /// </summary>
+        /// <param name="value">value to sanitize</param>
+        /// <returns>sanitized value</returns>
+        public static string SanitizeValue(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+
+            //TODO: a sanitization metod can be used to convert raw values for id and pk into friendlier version.
+            //i.e. create slug, trim, toLower().
+
+            return value;
         }
 
 
@@ -323,11 +339,9 @@ namespace CosmosDb.Domain
             if (idProp.Count() > 1)
                 throw new Exception("More than 1 Id property defined.");
 
-            //TODO: Sanitize Base properties (id and pk)
-
             res[_propertyNamesMap[BaseProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
-            res[_propertyNamesMap[BaseProperties.Id]] = idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? defaultId ?? Guid.NewGuid().ToString();
-            res[_propertyNamesMap[BaseProperties.PartitionKey]] = pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
+            res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? defaultId ?? Guid.NewGuid().ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = SanitizeValue(pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
 
             if (expandAllProps)
             {
