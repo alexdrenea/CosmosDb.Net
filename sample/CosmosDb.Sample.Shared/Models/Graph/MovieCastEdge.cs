@@ -2,11 +2,11 @@
 
 namespace CosmosDb.Sample.Shared.Models.Graph
 {
-    public class ActorMovieEdge
+    public class MovieCastEdge
     {
         public int Order { get; set; }
 
         [Label]
-        public string Label = "playedIn";
+        public string Label = "hasCast";
     }
 }

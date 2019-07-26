@@ -50,9 +50,9 @@ namespace CosmosDb.Sample.Shared.Models
             };
         }
 
-        public static Actor ToActor(this ActorCsv castCsv)
+        public static Cast ToCast(this CastCsv castCsv)
         {
-            return new Actor
+            return new Cast
             {
                 MovieTitle = castCsv.MovieTitle,
                 MovieId = castCsv.MovieId,
@@ -63,9 +63,9 @@ namespace CosmosDb.Sample.Shared.Models
             };
         }
 
-        public static ActorVertex ToActorVertex(this ActorCsv castCsv)
+        public static CastVertex ToCastVertex(this CastCsv castCsv)
         {
-            return new ActorVertex
+            return new CastVertex
             {
                 MovieTitle = castCsv.MovieTitle,
                 MovieId = castCsv.MovieId,
@@ -91,6 +91,14 @@ namespace CosmosDb.Sample.Shared.Models
                          .Select(k => k.Trim().ToLower())
                          .Distinct()
                          .Select(g => new GenreVertex { Genre = g })
+                         .ToArray();
+        }
+
+        public static IEnumerable<ActorVertex> AllActors(this IEnumerable<CastCsv> cast)
+        {
+            return cast.Select(c => c.ActorName.Trim())
+                         .Distinct()
+                         .Select(a => new ActorVertex { Name = a })
                          .ToArray();
         }
     }

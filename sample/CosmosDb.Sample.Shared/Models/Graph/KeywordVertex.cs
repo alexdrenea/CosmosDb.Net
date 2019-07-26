@@ -8,6 +8,6 @@ namespace CosmosDb.Sample.Shared.Models.Graph
         public string Keyword { get; set; }
 
         [PartitionKey]
-        public string Pk => "Keyword";
+        public string Pk { get; }  = "Keyword";
     }
 }

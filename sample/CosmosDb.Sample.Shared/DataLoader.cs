@@ -14,9 +14,9 @@ namespace CosmosDb.Sample.Shared
             return GetDataFromCsv<MovieCsv>("Data/movies_lite.csv");
         }
 
-        public static List<ActorCsv> LoadCast()
+        public static List<CastCsv> LoadCast()
         {
-            return GetDataFromCsv<ActorCsv>("Data/movies_cast_lite.csv");
+            return GetDataFromCsv<CastCsv>("Data/movies_cast_lite.csv");
         }
 
         public static List<T> GetDataFromCsv<T>(string fName)

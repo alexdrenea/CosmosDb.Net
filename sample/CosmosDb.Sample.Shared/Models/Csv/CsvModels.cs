@@ -7,7 +7,7 @@ namespace CosmosDb.Sample.Shared.Models.Csv
     /// <summary>
     /// A line of data from the cast csv sample file.
     /// </summary>
-    public class ActorCsv
+    public class CastCsv
     {
         public string MovieId { get; set; }
         public string MovieTitle { get; set; }

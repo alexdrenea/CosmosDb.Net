@@ -17,3 +17,10 @@ Keywords is a very small document. Movie is a larger size document.
 -- show stats output from insetring 1000 keyworks with 4, 8, 16 threads.
 
 -- show stats output from inserting 1000 movies with 4, 8, 16 threads
+
+
+- inserting edges:
+ -one by one using the _cosmosClient.UpsertEdge(edge, source, target, single);
+ - multuiple at oince 
+   - create EdgeDefinition instances that contain edge, source, target single,
+   - use the _Cosmosclient.upsertEdges method, that works just like vertices.

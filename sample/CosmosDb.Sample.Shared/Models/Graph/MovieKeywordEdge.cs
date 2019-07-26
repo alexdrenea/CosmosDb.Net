@@ -1,4 +1,9 @@
-﻿namespace CosmosDb.Sample.Shared.Models.Graph
+﻿using CosmosDb.Attributes;
+
+namespace CosmosDb.Sample.Shared.Models.Graph
 {
-    public class MovieKeywordEdge { }
+    public class MovieKeywordEdge {
+        [Label]
+        public string Label = "hasKeyword";
+    }
 }
