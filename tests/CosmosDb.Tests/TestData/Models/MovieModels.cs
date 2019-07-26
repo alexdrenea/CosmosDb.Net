@@ -257,9 +257,9 @@ namespace CosmosDb.Tests.TestData.Models
             {
                 TmdbId = movieCsv.TmdbId,
                 Budget = movieCsv.Budget,
-                Cast = cast?.Select(c => Models.Cast.GetCastFromCsv(c, movieCsv.Title)).ToList() ?? new List<Cast>(),
-                Genres = movieCsv.Genres.Split(';').ToList(),
-                Keywords = movieCsv.Keywords.Split(';').ToList(),
+                Cast = cast?.Select(c => Models.Cast.GetCastFromCsv(c)).ToList() ?? new List<Cast>(),
+                Genres = movieCsv.Genres.Split(new[] { ';' },StringSplitOptions.RemoveEmptyEntries).ToList(),
+                Keywords = movieCsv.Keywords.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
                 Language = movieCsv.Language,
                 Overview = movieCsv.Overview,
                 Rating = new Rating { SiteName = "TvDB", MaxRating = 5, AvgRating = movieCsv.Rating, Votes = movieCsv.Votes },
@@ -305,8 +305,8 @@ namespace CosmosDb.Tests.TestData.Models
             {
                 TmdbId = movieCsv.TmdbId,
                 Budget = movieCsv.Budget,
-                Genres = movieCsv.Genres.Split(';').ToList(),
-                Keywords = movieCsv.Keywords.Split(';').ToList(),
+                Genres = movieCsv.Genres.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
+                Keywords = movieCsv.Keywords.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
                 Language = movieCsv.Language,
                 Overview = movieCsv.Overview,
                 Rating = new Rating { SiteName = "TvDB", MaxRating = 5, AvgRating = movieCsv.Rating, Votes = movieCsv.Votes },
@@ -318,4 +318,5 @@ namespace CosmosDb.Tests.TestData.Models
             };
         }
     }
+
 }

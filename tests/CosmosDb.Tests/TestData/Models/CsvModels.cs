@@ -9,8 +9,9 @@ namespace CosmosDb.Tests.TestData.Models
     /// </summary>
     public class CastCsv
     {
-        public string TmdbId { get; set; }
-        public string Name { get; set; }
+        public string MovieId { get; set; }
+        public string MovieTitle { get; set; }
+        public string ActorName { get; set; }
         public string Character { get; set; }
         public int Order { get; set; }
         public bool Uncredited { get; set; }

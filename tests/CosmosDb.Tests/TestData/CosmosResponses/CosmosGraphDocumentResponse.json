@@ -68,14 +68,14 @@
   "Genres": [
     {
       "id": "f4778d11-4ffd-4b14-bc9b-f6cac456c293",
-      "_value": "Action;Adventure;Fantasy;Science Fiction",
+      "_value": "[\"Action\",\"Adventure\"]",
       "_meta": {}
     }
   ],
   "Keywords": [
     {
       "id": "2bdbf1ef-275c-4d34-9b2f-ea596c759a5c",
-      "_value": "culture clash;future;space war;space colony;society;space travel;futuristic;romance;space;alien;tribe;alien planet;cgi;marine;soldier;battle;love affair;anti war;power relations;mind and soul;3d",
+      "_value": "[\"saving the world\",\"artificial intelligence\",\"prophecy\",\"san francisco\",\"cyborg\"]",
       "_meta": {}
     }
   ],

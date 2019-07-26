@@ -10,7 +10,9 @@ using System.Threading.Tasks;
 namespace CosmosDb.Tests
 {
     [TestClass]
+#if !DEBUG
     [Ignore("Don't run on CI since it requries a conection to a CosmosDB. Update account name and key and run locally only")]
+#endif
     public class CosmosClientGremlinTests
     {
         private static string accountName = "f0887a1a-0ee0-4-231-b9ee";
@@ -19,9 +21,10 @@ namespace CosmosDb.Tests
         private static string databaseId = "core";
         private static string containerId = "test1";
 
+        private static int MOVIES_TO_TEST = 50; // number of movies to take from the sample dataset when running the tests.
+
         private static string moviesTestDataPath = "TestData/Samples/movies_lite.csv";
         private static string castTestDataPath = "TestData/Samples/movies_cast_lite.csv";
-
 
         private static List<MovieFullGraph> _movies;
         private static Dictionary<string, List<Cast>> _cast;
@@ -35,7 +38,7 @@ namespace CosmosDb.Tests
 
             _movies = moviesCsv.Select(MovieFullGraph.GetMovieFullGraph).ToList();
             var moviesDic = _movies.ToDictionary(k => k.TmdbId);
-            _cast = castCsv.Select(c => Cast.GetCastFromCsv(c, moviesDic[c.TmdbId].Title)).GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
+            _cast = castCsv.Select(c => Cast.GetCastFromCsv(c)).GroupBy(k => k.MovieId).ToDictionary(k => k.Key, v => v.ToList());
 
             Assert.AreEqual(4802, moviesCsv.Count());
 
@@ -63,9 +66,21 @@ namespace CosmosDb.Tests
 
         [TestMethod]
         [Priority(2)]
+        public async Task InsertManyVertices()
+        {
+            var insert = await _cosmosClient.InsertVertex(_movies.Skip(1).Take(MOVIES_TO_TEST), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
+
+            var totalRu = insert.Sum(i => i.RequestCharge);
+            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
+
+            Assert.IsTrue(insert.All(i => i.IsSuccessful));
+        }
+
+        [TestMethod]
+        [Priority(3)]
         public async Task UpsertVertex()
         {
-            var movie = _movies.ElementAt(1);
+            var movie = _movies.ElementAt(0);
 
             var upsert = await _cosmosClient.UpsertVertex(movie);
 
@@ -88,22 +103,10 @@ namespace CosmosDb.Tests
         }
 
         [TestMethod]
-        [Priority(3)]
-        public async Task InsertManyCosmosvertices()
-        {
-            var insert = await _cosmosClient.InsertVertex(_movies.Skip(10).Take(100), (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices"); });
-
-            var totalRu = insert.Sum(i => i.RequestCharge);
-            var totalTime = insert.Sum(i => i.ExecutionTime.TotalSeconds);
-
-            Assert.IsTrue(insert.All(i => i.IsSuccessful));
-        }
-
-        [TestMethod]
         [Priority(4)]
-        public async Task UpsertManyCosmosvertices()
+        public async Task UpsertManyVertices()
         {
-            var movies = _movies.Take(10);
+            var movies = _movies.Take(MOVIES_TO_TEST);
             var cast = movies.SelectMany(m => _cast[m.TmdbId]).ToList();
 
             var upsertMovies = await _cosmosClient.UpsertVertex(movies, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices"); });
@@ -112,8 +115,8 @@ namespace CosmosDb.Tests
             var totalRu = upsertMovies.Sum(i => i.RequestCharge) + upsertCast.Sum(i => i.RequestCharge);
             var totalTime = upsertMovies.Sum(i => i.ExecutionTime.TotalSeconds) + upsertCast.Sum(i => i.ExecutionTime.TotalSeconds);
 
-            //TODO: is TotalSeconds correct?
-
+            //Yes, Total Seconds is corert. If you're running multiple threads, adding the execution time of each operation will result in a number much higher than the atual time it takes to execute the method
+            // i.e for 4 threads, the total time measured by adding all timings will be ~4 times higher (cause we're running in parralel)
             Assert.IsTrue(upsertMovies.All(i => i.IsSuccessful));
             Assert.IsTrue(upsertCast.All(i => i.IsSuccessful));
         }
@@ -283,5 +286,71 @@ namespace CosmosDb.Tests
             Assert.AreEqual(2, testEdges.Result.Count());
         }
 
+        [TestMethod]
+        public async Task UpsertMultipleEdges()
+        {
+            var movies = _movies.Take(MOVIES_TO_TEST).ToDictionary(k => k.TmdbId);
+            var cast = movies.SelectMany(m => _cast[m.Key]).ToList();
+
+            var edges = cast.Select(c => new EdgeDefinition(new MovieCastEdge() { Order = c.Order }, _cosmosClient.CosmosSerializer.ToGraphItemBase(movies[c.MovieId]), _cosmosClient.CosmosSerializer.ToGraphItemBase(c), true)).ToList();
+            var upsertEdges = await _cosmosClient.UpsertEdges(edges, (partial) => { Console.WriteLine($"upserted {partial.Count()} edges"); });
+        }
+
+
+
+        [TestMethod]
+        [Priority(100)]
+        public async Task TestIdInvalidIdCharacters()
+        {
+            //https://docs.microsoft.com/en-us/dotnet/api/microsoft.azure.documents.resource.id?redirectedfrom=MSDN&view=azure-dotnet#overloads
+            var good = new TestModel { Id = "good-id", Pk = "good-partition" };
+            var withSpace = new TestModel { Id = "id with space", Pk = "good-partition" };
+            var withSlash = new TestModel { Id = "id-with-/", Pk = "good-partition" };
+            var withBackslash = new TestModel { Id = "id-with-\\", Pk = "good-partition" };
+            var withHash = new TestModel { Id = "id-with-#", Pk = "good-partition" };
+            var withDollar = new TestModel { Id = "id-with-$", Pk = "good-partition" };
+
+            var insertGood = await _cosmosClient.UpsertVertex(good);
+            var insertwithSpace = await _cosmosClient.UpsertVertex(withSpace);
+            var insertwithSlash = await _cosmosClient.UpsertVertex(withSlash);
+            var insertwithBackslash = await _cosmosClient.UpsertVertex(withBackslash);
+            var insertwithHash = await _cosmosClient.UpsertVertex(withHash);
+            var insertwithDollar = await _cosmosClient.UpsertVertex(withDollar);
+
+            Assert.IsTrue(insertGood.IsSuccessful);
+            Assert.IsTrue(insertwithSpace.IsSuccessful);
+            Assert.IsTrue(insertwithSlash.IsSuccessful);
+            Assert.IsTrue(insertwithBackslash.IsSuccessful);
+            Assert.IsTrue(insertwithHash.IsSuccessful);
+            Assert.IsTrue(insertwithDollar.IsSuccessful);
+        }
+
+
+        [TestMethod]
+        [Priority(100)]
+        public async Task TestIdInvalidPkCharacters()
+        {
+            //https://docs.microsoft.com/en-us/dotnet/api/microsoft.azure.documents.resource.id?redirectedfrom=MSDN&view=azure-dotnet#overloads
+            var good = new TestModel { Id = "good-id", Pk = "good-partition" };
+            var withSpace = new TestModel { Id = "good-id", Pk = "partition with space" };
+            var withSlash = new TestModel { Id = "good-id", Pk = "good-partition-with-/" };
+            var withBackslash = new TestModel { Id = "good-id", Pk = "good-partitionwith-\\" };
+            var withHash = new TestModel { Id = "good-id", Pk = "good-partition-with-#" };
+            var withDollar = new TestModel { Id = "good-id", Pk = "good-partition-with-$" };
+
+            var insertGood = await _cosmosClient.UpsertVertex(good);
+            var insertwithSpace = await _cosmosClient.UpsertVertex(withSpace);
+            var insertwithSlash = await _cosmosClient.UpsertVertex(withSlash);
+            var insertwithBackslash = await _cosmosClient.UpsertVertex(withBackslash);
+            var insertwithHash = await _cosmosClient.UpsertVertex(withHash);
+            var insertwithDollar = await _cosmosClient.UpsertVertex(withDollar);
+
+            Assert.IsTrue(insertGood.IsSuccessful);
+            Assert.IsTrue(insertwithSpace.IsSuccessful);
+            Assert.IsTrue(insertwithSlash.IsSuccessful);
+            Assert.IsTrue(insertwithBackslash.IsSuccessful);
+            Assert.IsTrue(insertwithHash.IsSuccessful);
+            Assert.IsTrue(insertwithDollar.IsSuccessful);
+        }
     }
 }

@@ -31,13 +31,13 @@ namespace CosmosDb.Tests.TestData.Models
             };
         }
 
-        public static Cast GetCastFromCsv(CastCsv castCsv, string movieTitle)
+        public static Cast GetCastFromCsv(CastCsv castCsv)
         {
             return new Cast
             {
-                MovieTitle = movieTitle,
-                MovieId = castCsv.TmdbId,
-                ActorName = castCsv.Name,
+                MovieTitle = castCsv.MovieTitle,
+                MovieId = castCsv.MovieId,
+                ActorName = castCsv.ActorName,
                 Character = castCsv.Character,
                 Order = castCsv.Order,
                 Uncredited = castCsv.Uncredited,

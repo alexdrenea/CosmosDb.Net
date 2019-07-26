@@ -1,4 +1,6 @@
-﻿namespace CosmosDb.Domain
+﻿using System.Collections.Generic;
+
+namespace CosmosDb.Domain
 {
     public class GraphItemBase
     {

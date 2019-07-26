@@ -14,6 +14,7 @@ namespace CosmosDb
         CosmosClient Client { get; }
         Database Database { get; }
         Container Container { get; }
+        CosmosEntitySerializer CosmosSerializer { get; }
 
         /// <summary>
         /// Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.
@@ -84,7 +85,7 @@ namespace CosmosDb
         /// This call uses the SQL API to upsert the vertex as a document.
         /// </summary>
         /// <param name="entity">Entity to upsert</param>
-        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/></exception>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         Task<CosmosResponse> UpsertVertex<T>(T entity);
 
@@ -173,6 +174,41 @@ namespace CosmosDb
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
         Task<CosmosResponse> UpsertEdge<T>(T edge, GraphItemBase source, GraphItemBase target, bool single = false);
 
+
+        /// <summary>
+        /// Insert multiple edges into the database using a TPL Dataflow block.
+        /// This call uses the SQL API to insert the edges as a document.
+        /// </summary>
+        /// <param name="edges">Edges to insert</param>
+        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+
+
+        /// <summary>
+        /// Upsert (Insert or Update) multiple edges into the database using a TPL Dataflow block.
+        /// This call uses the SQL API to upsert the edges as a document.
+        /// </summary>
+        /// <param name="edges">Edges to upsert</param>
+        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
 
 
         /// <summary>
