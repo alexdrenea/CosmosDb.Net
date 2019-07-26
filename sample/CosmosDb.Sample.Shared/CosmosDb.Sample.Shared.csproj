@@ -4,6 +4,20 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Data\movies_cast_lite.csv" />
+    <None Remove="Data\movies_lite.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\movies_cast_lite.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\movies_lite.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 
   <ItemGroup>
     <PackageReference Include="CosmosDb.Domain" Version="3.0.1" />

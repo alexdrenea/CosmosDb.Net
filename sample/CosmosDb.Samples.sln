@@ -5,9 +5,9 @@ VisualStudioVersion = 16.0.28902.138
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Sample.Shared", "CosmosDb.Sample.Shared\CosmosDb.Sample.Shared.csproj", "{DF906013-459E-418A-866B-52999A349C85}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Sample.Graph", "CosmosDb.Sample.Graph\CosmosDb.Sample.Graph.csproj", "{DF067B58-FA7F-4579-A9D4-262AFA3312A3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Sample.GraphConsole", "CosmosDb.Sample.GraphConsole\CosmosDb.Sample.GraphConsole.csproj", "{DF067B58-FA7F-4579-A9D4-262AFA3312A3}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Sample.Sql", "CosmosDb.Sample.Sql\CosmosDb.Sample.Sql.csproj", "{ED07B062-5698-468F-90C2-A8482BE43EEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Sample.SqlConsole", "CosmosDb.Sample.SqlConsole\CosmosDb.Sample.SqlConsole.csproj", "{ED07B062-5698-468F-90C2-A8482BE43EEE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
