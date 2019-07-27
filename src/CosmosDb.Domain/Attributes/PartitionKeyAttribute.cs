@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace CosmosDb.Attributes
 {
+    //TODO: Add Slug propety
     public class PartitionKeyAttribute : Attribute
     {
     }

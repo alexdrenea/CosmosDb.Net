@@ -28,7 +28,7 @@ namespace CosmosDb.Tests.TestData.Models
         public string Title { get; set; }
 
         [Label]
-        public string Label => "Movie";
+        public string Label => "MovieProp";
 
         public DateTime ReleaseDate { get; set; }
         public int Runtime { get; set; }
@@ -115,6 +115,109 @@ namespace CosmosDb.Tests.TestData.Models
             };
         }
     }
+
+    /// <summary>
+    /// A movie model that does not define a label
+    /// Expecting a label property to be generated based on the class name
+    /// </summary>
+    public class MovieNoLabel
+    {
+        public string MovieId { get; set; }
+
+        [PartitionKey]
+        public string Title { get; set; }
+        public DateTime ReleaseDate { get; set; }
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public Rating Rating { get; set; }
+        public List<Cast> Cast { get; set; }
+
+        public static MovieNoLabel GetTestModel(string title)
+        {
+            var rnd = new Random();
+            return new MovieNoLabel
+            {
+                Title = title,
+                MovieId = $"{rnd.Next(100)}-{title}",
+                ReleaseDate = DateTime.Today,
+                Budget = 1000000,
+                Runtime = 121,
+                Rating = Rating.GetTestRating(title),
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
+            };
+        }
+    }
+    
+    /// <summary>
+    /// A movie model that defines a Label attribute at the class level.
+    /// When generating a cosmos document or vertex we expec the label to be picked up
+    /// </summary>
+    [Label(Value = "MovieClassAttribute")]
+    public class MovieLabelClass
+    {
+        public string MovieId { get; set; }
+
+        [PartitionKey]
+        public string Title { get; set; }
+        public DateTime ReleaseDate { get; set; }
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public Rating Rating { get; set; }
+        public List<Cast> Cast { get; set; }
+
+        public static MovieLabelClass GetTestModel(string title)
+        {
+            var rnd = new Random();
+            return new MovieLabelClass
+            {
+                Title = title,
+                MovieId = $"{rnd.Next(100)}-{title}",
+                ReleaseDate = DateTime.Today,
+                Budget = 1000000,
+                Runtime = 121,
+                Rating = Rating.GetTestRating(title),
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
+            };
+        }
+    }
+
+    /// <summary>
+    /// A movie model that defines a label both at the property level and class level
+    /// When generating a cosmos document or vertex, we expec the property level value to be picked up.
+    /// </summary>
+    [Label(Value = "MovieClassAttribute")]
+    public class MovieLabelClassAndProp
+    {
+        public string MovieId { get; set; }
+
+        [PartitionKey]
+        public string Title { get; set; }
+
+        [Label]
+        public string LabelProp => "MoviePropValue";
+
+        public DateTime ReleaseDate { get; set; }
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public Rating Rating { get; set; }
+        public List<Cast> Cast { get; set; }
+
+        public static MovieLabelClassAndProp GetTestModel(string title)
+        {
+            var rnd = new Random();
+            return new MovieLabelClassAndProp
+            {
+                Title = title,
+                MovieId = $"{rnd.Next(100)}-{title}",
+                ReleaseDate = DateTime.Today,
+                Budget = 1000000,
+                Runtime = 121,
+                Rating = Rating.GetTestRating(title),
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
+            };
+        }
+    }
+
 
     /// <summary>
     /// A movie model that defines some properties to be ignored
@@ -222,11 +325,12 @@ namespace CosmosDb.Tests.TestData.Models
         }
     }
 
-   
+
     /// <summary>
     /// A more detailed movie model that represents a movie based on the sample data present in the testing suite.
     /// To be used for performance tests for inserting a lot of documents.
     /// </summary>
+    [Label(Value = "Movie")]
     public class MovieFull
     {
         [Id]
@@ -272,10 +376,12 @@ namespace CosmosDb.Tests.TestData.Models
         }
     }
 
+
     /// <summary>
     /// A more detailed movie model that represents a movie based on the sample data present in the testing suite.
     /// To be used for performance tests for inserting a lot of documents.
     /// </summary>
+    [Label(Value = "Movie")]
     public class MovieFullGraph
     {
         [Id]

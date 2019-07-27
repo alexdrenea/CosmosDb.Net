@@ -66,6 +66,15 @@ namespace CosmosDb
         Task<CosmosResponse<T>> ReadDocument<T>(string docId, string partitionKey);
 
         /// <summary>
+        /// Gets all documents of the given type from the collection.
+        /// </summary>
+        /// <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+        /// <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+        /// <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+        /// <returns>Collection of results.</returns>
+        Task<CosmosResponse<IEnumerable<T>>> ReadDocuments<T>(string filter = "", string label = "", CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
         /// Executes a SQL Query against the collection
         /// </summary>
         /// <param name="query">Query to execute</param>

@@ -8,5 +8,6 @@ namespace CosmosDb.Attributes
 {
     public class LabelAttribute : Attribute
     {
+        public string Value { get; set; }
     }
 }

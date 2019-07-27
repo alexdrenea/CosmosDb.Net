@@ -304,5 +304,65 @@ namespace CosmosDb.Tests
             Assert.AreEqual(movie.ReleaseDate, movieGraph["ReleaseDate"], "ReleaseDate not matching");
             Assert.AreEqual(movie.Runtime, movieGraph["Runtime"], "Runtime not matching");
         }
+
+        [TestMethod]
+        public void GenerateCosmosDocumentNoLabelTes()
+        {
+            var movie = MovieNoLabel.GetTestModel("The Network");
+            var movieDoc = CosmosEntitySerializer.Default.ToCosmosDocument(movie) as IDictionary<string, object>;
+            Assert.IsNotNull(movieDoc, $"Failed to convert {movie.GetType()} to Document");
+
+            //Test that properties are present in the output document
+            var errors = new List<string>();
+
+            if (!movieDoc.ContainsKey("id")) errors.Add("Document missing Id property");
+            if (!movieDoc.ContainsKey("label")) errors.Add("Document missing Label property");
+            if (!movieDoc.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
+            Assert.IsFalse(errors.Any(), string.Join(Environment.NewLine, errors.ToArray()));
+            Assert.AreEqual(10, movieDoc.Keys.Count(), "Document has extra properties");
+
+            //Test values
+            Assert.AreEqual(movie.GetType().Name, movieDoc["label"], "label not matching");
+        }
+
+        [TestMethod]
+        public void GenerateCosmosDocumentClassLabelTest()
+        {
+            var movie = MovieLabelClass.GetTestModel("The Network");
+            var movieDoc = CosmosEntitySerializer.Default.ToCosmosDocument(movie) as IDictionary<string, object>;
+            Assert.IsNotNull(movieDoc, $"Failed to convert {movie.GetType()} to Document");
+
+            //Test that properties are present in the output document
+            var errors = new List<string>();
+
+            if (!movieDoc.ContainsKey("id")) errors.Add("Document missing Id property");
+            if (!movieDoc.ContainsKey("label")) errors.Add("Document missing Label property");
+            if (!movieDoc.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
+            Assert.IsFalse(errors.Any(), string.Join(Environment.NewLine, errors.ToArray()));
+            Assert.AreEqual(10, movieDoc.Keys.Count(), "Document has extra properties");
+
+            //Test values
+            Assert.AreEqual("MovieClassAttribute", movieDoc["label"], "label not matching");
+        }
+
+        [TestMethod]
+        public void GenerateCosmosDocumentClassAndPropLabelTest()
+        {
+            var movie = MovieLabelClassAndProp.GetTestModel("The Network");
+            var movieDoc = CosmosEntitySerializer.Default.ToCosmosDocument(movie) as IDictionary<string, object>;
+            Assert.IsNotNull(movieDoc, $"Failed to convert {movie.GetType()} to Document");
+
+            //Test that properties are present in the output document
+            var errors = new List<string>();
+
+            if (!movieDoc.ContainsKey("id")) errors.Add("Document missing Id property");
+            if (!movieDoc.ContainsKey("label")) errors.Add("Document missing Label property");
+            if (!movieDoc.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
+            Assert.IsFalse(errors.Any(), string.Join(Environment.NewLine, errors.ToArray()));
+            Assert.AreEqual(11, movieDoc.Keys.Count(), "Document has extra properties");
+
+            //Test values
+            Assert.AreEqual(movie.LabelProp, movieDoc["label"], "label not matching");
+        }
     }
 }

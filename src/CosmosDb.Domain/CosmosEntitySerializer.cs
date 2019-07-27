@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using CosmosDb.Attributes;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -92,15 +93,15 @@ namespace CosmosDb.Domain
         /// </summary>
         /// <remarks>
         /// If an Id expression is not passed in then a Guid will be generated for the id property/>
-        /// If a Label property is not passed in then the class name will be assigned to the label label property/>
+        /// If a Label expression is not passed, will look for a Label Attribute at the class level on T, if that's not found then the class name will be assigned to the label label property/>
         /// If an PartitionKey expression is not passed in then an exception will be thrown/>
         /// </remarks>
         /// <returns>
         /// dynamic object containing a key-value collection of a cosmosDB document entry in a CosmosDB Graph collection
         /// </returns>
-        public IDictionary<string, object> ToCosmosDocument<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
+        public IDictionary<string, object> ToCosmosDocument<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null)
         {
-            return GetObjectPropValues(entity, pkProperty, labelProp, idProp);
+            return GetObjectPropValues(entity, pkProperty, idProp, labelProp);
         }
 
 
@@ -110,7 +111,7 @@ namespace CosmosDb.Domain
         /// </summary>
         /// <remarks>
         /// If an Id expression is not passed in then a Guid will be generated for the id property/>
-        /// If a Label property is not passed in then the class name will be assigned to the label label property/>
+        /// If a Label expression is not passed, will look for a Label Attribute at the class level on T, if that's not found then the class name will be assigned to the label label property/>
         /// If an PartitionKey expression is not passed in then an exception will be thrown/>
         /// </remarks>
         /// <returns>
@@ -119,9 +120,9 @@ namespace CosmosDb.Domain
         /// <example>
         /// ToGraphVertex(entity, pkProperty: entity => entity.Title, labelProp: entity => entity.ItemType, idProp: entity => entity.EntityId) 
         /// </example>
-        public IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null)
+        public IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null)
         {
-            var vertexProps = GetObjectPropValues(data, pkProperty, labelProp, idProp);
+            var vertexProps = GetObjectPropValues(data, pkProperty, idProp, labelProp);
             return ToGraphVertexInternal(vertexProps);
         }
 
@@ -317,6 +318,10 @@ namespace CosmosDb.Domain
             return value;
         }
 
+        public static string GetLabelForType(Type dataType)
+        {
+            return dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
+        }
 
         /// <summary>
         /// Given object entity, transform it into a colleciton of key -  values
@@ -346,7 +351,7 @@ namespace CosmosDb.Domain
             if (idProp.Count() > 1)
                 throw new Exception("More than 1 Id property defined.");
 
-            res[_propertyNamesMap[BaseProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.Name;
+            res[_propertyNamesMap[BaseProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
             res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? defaultId ?? Guid.NewGuid().ToString();
             res[_propertyNamesMap[BaseProperties.PartitionKey]] = SanitizeValue(pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
 
@@ -362,7 +367,7 @@ namespace CosmosDb.Domain
             return res;
         }
 
-        private IDictionary<string, object> GetObjectPropValues<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> labelProp = null, Expression<Func<T, object>> idProp = null, bool expandAllProps = true)
+        private IDictionary<string, object> GetObjectPropValues<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null, bool expandAllProps = true)
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
@@ -370,7 +375,7 @@ namespace CosmosDb.Domain
             if (pkProperty == null)
                 throw new Exception("PartitionKey property defined must be defined.");
 
-            res[_propertyNamesMap[BaseProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.Name;
+            res[_propertyNamesMap[BaseProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
             res[_propertyNamesMap[BaseProperties.Id]] = dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
             res[_propertyNamesMap[BaseProperties.PartitionKey]] = dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
 

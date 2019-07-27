@@ -192,7 +192,15 @@ namespace CosmosDb.Tests
             Assert.IsTrue(read.IsSuccessful);
         }
 
-     
+
+        [TestMethod]
+        [Priority(10)]
+        public async Task ExecuteSqlCustomReturn()
+        {
+            var read = await _cosmosClient.ExecuteSQL<object>("select c.Title, c.Tagline, c.Overview from c");
+            Assert.IsTrue(read.IsSuccessful);
+        }
+
         //[TestMethod]
         //[Priority(10)]
         public async Task Upsert5000CosmosDocuments()

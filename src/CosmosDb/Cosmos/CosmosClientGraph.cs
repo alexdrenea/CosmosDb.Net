@@ -151,17 +151,20 @@ namespace CosmosDb
                     var start = DateTime.Now;
                     var graphResult = await gremlinClient.SubmitAsync<object>(queryString, bindings);
                     var graphResultString = JsonConvert.SerializeObject(graphResult);
-                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString);
+                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString).ToArray();
 
-                    var res = graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
-
-                    return new CosmosResponse<IEnumerable<T>>
+                    var res = new CosmosResponse<IEnumerable<T>>
                     {
-                        Result = res,
                         StatusCode = System.Net.HttpStatusCode.OK,
                         RequestCharge = Helpers.GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
                         ExecutionTime = DateTime.Now.Subtract(start)
                     };
+                   
+                    res.Result = (typeof(T) == typeof(JObject) || typeof(T) == typeof(object)) 
+                                    ? graphResultJObject.Cast<T>() 
+                                    : graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+
+                    return res;
                 }
             }
             catch (ResponseException e)
@@ -419,6 +422,23 @@ namespace CosmosDb
 
             cosmosResult.Result = CosmosSerializer.FromGraphson<T>(res.Result);
             return cosmosResult;
+        }
+
+        /// <summary>
+        /// Gets all documents of the given type from the collection.
+        /// </summary>
+        /// <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+        /// <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+        /// <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+        /// <returns>Collection of results.</returns>
+        public Task<CosmosResponse<IEnumerable<T>>> ReadVertices<T>(string filter = "", string label = "", CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!string.IsNullOrEmpty(filter)) filter = "and " + filter;
+            if (string.IsNullOrEmpty(label)) label = CosmosEntitySerializer.GetLabelForType(typeof(T));
+
+            var query = $"select * from c where c.label = '{label}' {filter}";
+
+            return ExecuteSQL<T>(query, cancellationToken: cancellationToken);
         }
 
         /// <summary>

@@ -28,6 +28,7 @@ namespace CosmosDb
         public Container Container { get; private set; }
 
         #region Initialization
+        //TODO: provision RU at database level
 
         /// <summary>
         /// Initialize a CosmosClient by providing the accountName and key.
@@ -272,6 +273,24 @@ namespace CosmosDb
                 return new CosmosResponse<T> { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
             }
         }
+
+        /// <summary>
+        /// Gets all documents of the given type from the collection.
+        /// </summary>
+        /// <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+        /// <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+        /// <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+        /// <returns>Collection of results.</returns>
+        public Task<CosmosResponse<IEnumerable<T>>> ReadDocuments<T>(string filter = "", string label = "", CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!string.IsNullOrEmpty(filter)) filter = "and " + filter;
+            if (string.IsNullOrEmpty(label)) label = CosmosEntitySerializer.GetLabelForType(typeof(T));
+
+            var query = $"select * from c where c.label = '{label}' {filter}";
+
+            return ExecuteSQL<T>(query, cancellationToken: cancellationToken);
+        }
+
 
         /// <summary>
         /// Executes a SQL Query against the collection
