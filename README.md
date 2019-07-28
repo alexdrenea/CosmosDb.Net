@@ -21,15 +21,16 @@ To get an instance of the client, use one of the static initializer methods foun
 There are also options for the initializer to automatically create the database and collection in case they do not exist, in which case an additional parameter `CreateOptions` must be provided:
 
 ```csharp
- //Initialize a CosmosClientSql. If database and container do not exist, initialize them with a 1000Ru Database throughput and a Partition Key under the `pk` property
+ //Initialize a CosmosClientSql.
+ //If database and container do not exist, initialize them with a 1000Ru Database throughput and a Partition Key under the `pk` property
  var sqlClient = await CosmosClientSql.GetByConnectionString(
-								connectionString, 
-								databaseId, 
-								containerId, 
-								new CreateOptions(databaseId, databaseId, "/pk") 
-								{ 
-									DatabaseThrouhput = 1000
-								});
+					connectionString, 
+					databaseId, 
+					containerId, 
+					new CreateOptions(databaseId, databaseId, "/pk") 
+					{ 
+						DatabaseThrouhput = 1000
+					});
 ```
 
 ### CosmosClientGraph

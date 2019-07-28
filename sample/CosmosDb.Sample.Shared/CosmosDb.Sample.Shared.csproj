@@ -29,7 +29,7 @@
 
 
   <ItemGroup>
-    <PackageReference Include="CosmosDB.Net.Domain" Version="3.0.0.3" />
+    <PackageReference Include="CosmosDB.Net.Domain" Version="3.0.1" />
     <PackageReference Include="CsvHelper" Version="12.1.2" />
   </ItemGroup>
   
