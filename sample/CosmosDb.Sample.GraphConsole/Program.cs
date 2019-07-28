@@ -37,7 +37,7 @@ namespace CosmosDb.Sample.GraphConsole
                 _databaseId = GetConfigValueOrDefault<string>(configuration, "DatabaseId", true);
                 _containerId = GetConfigValueOrDefault<string>(configuration, "ContainerId", true);
 
-                _graphClient = await CosmosClientGraph.GetClientWithSql(_accountName, _accountKey, _databaseId, _containerId, forceCreate: false);
+                _graphClient = await CosmosClientGraph.GetClientWithSql(_accountName, _accountKey, _databaseId, _containerId, new CreateOptions(_databaseId, _containerId));
 
                 Console.Title = "CosmosDB.NET Gremlin Sample";
                 await new ConsoleREPL(new Program()).RunLoop();

@@ -35,7 +35,7 @@ namespace CosmosDb.Sample.SqlConsole
                 _databaseId = GetConfigValueOrDefault<string>(configuration, "DatabaseId", true);
                 _containerId = GetConfigValueOrDefault<string>(configuration, "ContainerId", true);
 
-                _sqlClient = await CosmosClientSql.GetByAccountName(_accountName, _accountKey, _databaseId, _containerId, forceCreate: false);
+                _sqlClient = await CosmosClientSql.GetByAccountName(_accountName, _accountKey, _databaseId, _containerId, new CreateOptions(_databaseId, _containerId));
 
                 Console.Title = "CosmosDB.NET SQL Sample";
                 await new ConsoleREPL(new Program()).RunLoop();
