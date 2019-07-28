@@ -374,8 +374,8 @@ namespace CosmosDB.Net.Domain
                 throw new Exception("PartitionKey property defined must be defined.");
 
             res[_propertyNamesMap[BaseProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
-            res[_propertyNamesMap[BaseProperties.Id]] = dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? Guid.NewGuid().ToString();
-            res[_propertyNamesMap[BaseProperties.PartitionKey]] = dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString() ?? throw new Exception("PartitionKey property must have a non-empty value");
+            res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString()) ?? Guid.NewGuid().ToString();
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] = SanitizeValue(dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString()) ?? throw new Exception("PartitionKey property must have a non-empty value");
 
             if (expandAllProps)
             {
