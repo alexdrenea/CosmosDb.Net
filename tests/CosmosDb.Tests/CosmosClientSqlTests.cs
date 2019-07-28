@@ -1,7 +1,9 @@
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using CosmosDB.Net;
+using Microsoft.Azure.Cosmos;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,39 +46,184 @@ namespace CosmosDb.Tests
 
             Assert.AreEqual(4802, moviesCsv.Count());
 
-            _cosmosClient = await CosmosClientSql.GetByConnectionString(connectionString, databaseId, containerId, forceCreate: false);
+            _cosmosClient = await CosmosClientSql.GetByConnectionString(connectionString, databaseId, containerId);
         }
+        #region Initializers
 
         [TestMethod]
         public async Task GetClientWithAccountName()
         {
-            var ccq = CosmosClientSql.GetByAccountName(accountName, accountKey, databaseId, containerId, forceCreate: false);
+            var ccq = await CosmosClientSql.GetByAccountName(accountName, accountKey, databaseId, containerId);
             Assert.IsNotNull(ccq);
 
-            var read = await _cosmosClient.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
+            var read = await ccq.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
             Assert.IsTrue(read.IsSuccessful);
         }
 
         [TestMethod]
         public async Task GetClientWithAccountEndpoint()
         {
-            var ccq = CosmosClientSql.GetByAccountName(accountEndpoint, accountKey, databaseId, containerId, forceCreate: false);
+            var ccq = await CosmosClientSql.GetByAccountName(accountEndpoint, accountKey, databaseId, containerId);
             Assert.IsNotNull(ccq);
 
-            var read = await _cosmosClient.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
+            var read = await ccq.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
             Assert.IsTrue(read.IsSuccessful);
         }
 
         [TestMethod]
         public async Task GetClientWithConnectionString()
         {
-            var ccq = CosmosClientSql.GetByConnectionString(connectionString, databaseId, containerId, forceCreate: false);
+            var ccq = await CosmosClientSql.GetByConnectionString(connectionString, databaseId, containerId);
             Assert.IsNotNull(ccq);
 
-            var read = await _cosmosClient.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
+            var read = await ccq.ExecuteSQL<MovieFull>($"select * from c where c.Title = 'Avatar'");
             Assert.IsTrue(read.IsSuccessful);
         }
 
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoDatabaseNoContainerDatabaseTrhoughput()
+        {
+            var dbId = DateTime.Now.Ticks.ToString();
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                await Assert.ThrowsExceptionAsync<CosmosException>(()=> CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId, "/pk") { DatabaseThrouhput = 1000 });
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Database.DeleteAsync();
+            }
+        }
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoDatabaseNoContainerContainerTrhoughput()
+        {
+            var dbId = DateTime.Now.Ticks.ToString();
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                await Assert.ThrowsExceptionAsync<CosmosException>(() => CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId) { ContainerThroughput = 1000 });
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Database.DeleteAsync();
+            }
+        }
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoDatabaseNoContainerDatabaseAndContainerTrhoughput()
+        {
+            var dbId = DateTime.Now.Ticks.ToString();
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                await Assert.ThrowsExceptionAsync<CosmosException>(() => CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId) { DatabaseThrouhput = 1000, ContainerThroughput = 1000 }); ; ;
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Database.DeleteAsync();
+            }
+        }
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoDatabaseNoContainerNoThroughput()
+        {
+            var dbId = DateTime.Now.Ticks.ToString();
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                //Not providing thoughput defualts to 400RU container level
+                await Assert.ThrowsExceptionAsync<CosmosException>(() => CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId)); ; ;
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Database.DeleteAsync();
+            }
+        }
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoContainerDatabaseTrhoughput()
+        {
+            var dbId = "core";
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                await Assert.ThrowsExceptionAsync<CosmosException>(() => CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId) { DatabaseThrouhput = 400 });
+
+                //The database already exists, the new value we set should not have been applied.
+                var database = await client.Database.ReadThroughputAsync();
+                Assert.AreNotEqual(400, database.Value);
+
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Container.DeleteContainerAsync();
+            }
+        }
+
+        [TestMethod]
+        public async Task GetClientWithConnectionStringNoContainerContainerTrhoughput()
+        {
+            var dbId = "core";
+            var cId = "newContainer";
+            ICosmosClientSql client = null;
+            try
+            {
+                await Assert.ThrowsExceptionAsync<CosmosException>(() => CosmosClientSql.GetByConnectionString(connectionString, dbId, cId));
+                client = await CosmosClientSql.GetByConnectionString(connectionString, dbId, cId, new CreateOptions(dbId, cId, "/pk") { DatabaseThrouhput = 400, ContainerThroughput = 400 });
+
+                //The database already exists, the new value we set should not have been applied.
+                var databaseRUs = await client.Database.ReadThroughputAsync();
+                Assert.AreNotEqual(400, databaseRUs.Value);
+
+                var container = await client.Container.ReadContainerAsync();
+                Assert.AreEqual("/pk", container.Resource.PartitionKeyPath);
+
+                var containerRUs = await client.Container.ReadThroughputAsync();
+                Assert.AreEqual(400, containerRUs.Value);
+
+                var read = await client.ExecuteSQL<int>($"SELECT VALUE COUNT(c) FROM c");
+                Assert.IsTrue(read.IsSuccessful);
+                Assert.AreEqual(0, read.Result.FirstOrDefault());
+            }
+            finally
+            {
+                await client?.Container.DeleteContainerAsync();
+            }
+        }
+
+        #endregion
 
         [TestMethod]
         [Priority(1)]
@@ -201,6 +348,18 @@ namespace CosmosDb.Tests
             var read = await _cosmosClient.ExecuteSQL<object>("select c.Title, c.Tagline, c.Overview from c");
             Assert.IsTrue(read.IsSuccessful);
         }
+
+
+        [TestMethod]
+        [Priority(10)]
+        public async Task ExecuteSqlValueReturn()
+        {
+            var read3 = await _cosmosClient.ExecuteSQL<string>("SELECT VALUE c.Title FROM c where c.label = 'Movie'");
+            Assert.IsTrue(read3.IsSuccessful);
+        }
+
+
+
 
         //[TestMethod]
         //[Priority(10)]

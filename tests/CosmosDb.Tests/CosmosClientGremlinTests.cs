@@ -201,31 +201,39 @@ namespace CosmosDb.Tests
         [TestMethod]
         public async Task ReadMultiWithSql()
         {
-            var read = await _cosmosClient.ExecuteSQL<MovieFullGraph>($"select * from c where c.label = 'Movie'");
+            var readMovies = await _cosmosClient.ExecuteSQL<MovieFullGraph>($"select * from c where c.label = 'Movie'");
+            Assert.IsTrue(readMovies.IsSuccessful);
+
+            var readVertices = await _cosmosClient.ReadVertices<MovieFullGraph>();
+            Assert.IsTrue(readVertices.IsSuccessful);
+
+            Assert.AreEqual(readMovies.Result.Count(), readVertices.Result.Count());
+
+            var read = await _cosmosClient.ExecuteSQL<string>($"SELECT VALUE c.Title[0]._value FROM c where c.label = 'Movie'");
             Assert.IsTrue(read.IsSuccessful);
-
-            var readDocs = await _cosmosClient.ReadVertices<MovieFullGraph>();
-            Assert.IsTrue(readDocs.IsSuccessful);
-
-            Assert.AreEqual(read.Result.Count(), readDocs.Result.Count());
         }
 
 
         [TestMethod]
-        public async Task GremlinTraversal1()
+        public async Task GremlinTraversal()
         {
-            var read = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().limit(1).outE()");
-            Assert.IsTrue(read.IsSuccessful);
+            var readCount = await _cosmosClient.ExecuteGremlin<int>($"g.V().hasLabel('Movie').count()");
+            Assert.IsTrue(readCount.IsSuccessful);
 
-            var readObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().limit(1).outE()");
-            Assert.IsTrue(readObj.IsSuccessful);
-        }
+            var readCountSingle = await _cosmosClient.ExecuteGremlinSingle<int>($"g.V().hasLabel('Movie').count()");
+            Assert.IsTrue(readCountSingle.IsSuccessful);
 
-        [TestMethod]
-        public async Task GremlinTraversal2()
-        {
-            var read = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().hasLabel('Movie').limit(1).out().tree()");
-            Assert.IsTrue(read.IsSuccessful);
+            var readOut = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().limit(1).outE()");
+            Assert.IsTrue(readOut.IsSuccessful);
+
+            var readOutObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().limit(1).outE()");
+            Assert.IsTrue(readOutObj.IsSuccessful);
+
+            var readTree = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().hasLabel('Movie').limit(1).out().tree()");
+            Assert.IsTrue(readTree.IsSuccessful);
+
+            var readTreeObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().hasLabel('Movie').limit(1).out().tree()");
+            Assert.IsTrue(readTreeObj.IsSuccessful);
         }
 
         [TestMethod]
