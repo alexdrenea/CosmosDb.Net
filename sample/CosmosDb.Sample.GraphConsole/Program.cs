@@ -227,6 +227,22 @@ namespace CosmosDb.Sample.GraphConsole
             //==================
 
 
+            //Generate reverse genre edges. Each movie has multiple genres so for each movie we need to generate one for each genre it has.
+            var genreEdge2Definitions = movies.Values.SelectMany(m =>
+            {
+                var mgib = _graphClient.CosmosSerializer.ToGraphItemBase(m);
+                return m.Genres.Where(g => !string.IsNullOrEmpty(g)).Select(g => new EdgeDefinition(new MovieCastEdge(), _graphClient.CosmosSerializer.ToGraphItemBase(genres[g]), mgib, true));
+            }).ToArray();
+
+            var startTime5 = DateTime.Now;
+            ConsoleHelpers.ConsoleLine($"Inserting {genreEdge2Definitions.Count()} genre Edges (using {args.threads} threads)...");
+            var upsertGenre2Edges = await _graphClient.UpsertEdges(genreEdge2Definitions, (res) => { ConsoleHelpers.ConsoleLine($"processed {res.Count()}/{genreEdge2Definitions.Count()} genre Edges"); }, threads: args.threads);
+            ConsoleHelpers.PrintStats(upsertGenre2Edges, DateTime.Now.Subtract(startTime5).TotalSeconds);
+            //==================
+
+
+
+
             //Generate movieCast edges. Each movie has multiple keywords so for each movie we need to generate one for each genre it has.
             var castEdgeDefinitions = cast.Select(c =>
             {
@@ -302,20 +318,40 @@ namespace CosmosDb.Sample.GraphConsole
         [ConsoleActionTrigger("g", "gremlin")]
         [ConsoleActionDescription("Run a gremlin traversal")]
         [ConsoleActionDisplayOrder(201)]
-        public async Task ExecuteGremlin(string parameter)
+        public Task ExecuteGremlin(string parameter)
         {
-            var result = await _graphClient.ExecuteGremlin<dynamic>(parameter);
+            return RunGremlin<dynamic>(parameter);
+        }
 
-            ConsoleHelpers.ConsoleLine($"{result.Result?.Count()} results.");
-            ConsoleHelpers.ConsoleLine(result.Result?.First());
-            ConsoleHelpers.ConsoleLine($"Success: {result.IsSuccessful}. Execution Time: {result.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {result.RequestCharge.ToString("#.##")} RUs");
+        [ConsoleActionTrigger("g1")]
+        [ConsoleActionDescription("Get all movies with a given genre (parameter)")]
+        [ConsoleActionDisplayOrder(200)]
+        public Task ExecuteG1(string parameter)
+        {
+            var traversal = $"g.V().hasLabel('Genre').has('PartitionKey','Genre').has('id', '{parameter.ToLower()}').in()";
+            return RunGremlin<Movie>(traversal);
+        }
+
+        [ConsoleActionTrigger("g2")]
+        [ConsoleActionDescription("Get all movies with a given genre (parameter)")]
+        [ConsoleActionDisplayOrder(200)]
+        public Task ExecuteG2(string parameter)
+        {
+            var traversal = $"g.V().hasLabel('Genre').has('PartitionKey','Genre').has('id', '{parameter.ToLower()}').out()";
+            return RunGremlin<Movie>(traversal);
         }
 
 
-        //TODO - show example of parsing a tree()
-
-
         #region Helpers
+
+        private static async Task RunGremlin<T>(string query)
+        {
+            var result = await _graphClient.ExecuteGremlin<dynamic>(query);
+
+            ConsoleHelpers.ConsoleLine($"{result.Result?.Count()} results.");
+            //ConsoleHelpers.ConsoleLine(res.Result?.FirstOrDefault());
+            ConsoleHelpers.ConsoleLine($"Success: {result.IsSuccessful}. Execution Time: {result.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {result.RequestCharge.ToString("#.##")} RUs");
+        }
 
         private static (int records, int threads) Parse2intParameters(string args, int defaultFirst, int defaultSecond = NUMBER_OF_THREADS)
         {

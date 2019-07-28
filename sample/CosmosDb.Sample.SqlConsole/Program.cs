@@ -142,16 +142,31 @@ namespace CosmosDb.Sample.SqlConsole
         [ConsoleActionTrigger("q", "sql")]
         [ConsoleActionDescription("Run a query")]
         [ConsoleActionDisplayOrder(200)]
-        public async Task ExecuteSql(string parameter)
+        public Task ExecuteSql(string parameter)
         {
-            var result = await _sqlClient.ExecuteSQL<dynamic>(parameter);
+            return RunSql<dynamic>(parameter);
+        }
 
-            ConsoleHelpers.ConsoleLine($"{result.Result?.Count()} results.");
-            ConsoleHelpers.ConsoleLine(result.Result?.First());
-            ConsoleHelpers.ConsoleLine($"Success: {result.IsSuccessful}. Execution Time: {result.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {result.RequestCharge.ToString("#.##")} RUs");
+        [ConsoleActionTrigger("q1")]
+        [ConsoleActionDescription("Get all movies with a given genre (parameter)")]
+        [ConsoleActionDisplayOrder(200)]
+        public Task ExecuteQ1(string parameter)
+        {
+            var query = $"SELECT value c FROM c join g in c.Genres where g = '{parameter.ToLower()}' and c.label = 'Movie'";
+            return RunSql<Movie>(query);
         }
 
         #region Helpers
+
+        private static async Task RunSql<T>(string query)
+        {
+            var result = await _sqlClient.ExecuteSQL<T>(query);
+
+            ConsoleHelpers.ConsoleLine($"{result.Result?.Count()} results.");
+            if (result.IsSuccessful && result.Result.Any())
+               ConsoleHelpers.ConsoleLine(result.Result.FirstOrDefault());
+            ConsoleHelpers.ConsoleLine($"Success: {result.IsSuccessful}. Execution Time: {result.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {result.RequestCharge.ToString("#.##")} RUs");
+        }
 
         private static (int records, int threads) Parse2intParameters(string args, int defaultFirst, int defaultSecond = NUMBER_OF_THREADS)
         {
@@ -182,5 +197,12 @@ namespace CosmosDb.Sample.SqlConsole
 
 
         #endregion
+
+
+        /*
+         * EXAMPLES:
+            1. SELECT VALUE c.Title FROM c join g in c.Genres where g = 'action' and c.label = 'Movie'
+         * 
+        */
     }
 }
