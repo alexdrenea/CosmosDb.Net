@@ -1,11 +1,13 @@
-using CosmosDb.Domain;
+using CosmosDB.Net.Domain;
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CosmosDB.Net;
 
 namespace CosmosDb.Tests
 {
@@ -134,7 +136,7 @@ namespace CosmosDb.Tests
         [TestMethod]
         public async Task ReadWithGremlin()
         {
-            var movie = _movies.ElementAt(0);
+            var movie = _movies.ElementAt(1);
             var movie2 = _movies.ElementAt(2);
 
             var read = await _cosmosClient.ExecuteGremlinSingle<MovieFullGraph>($"g.V().hasId('{movie.TmdbId}').has('PartitionKey', '{movie.Title}')");
@@ -149,8 +151,8 @@ namespace CosmosDb.Tests
         [TestMethod]
         public async Task ReadWithGremlinWithBindings()
         {
-            var movie = _movies.ElementAt(0);
-            var movie2 = _movies.ElementAt(1);
+            var movie = _movies.ElementAt(1);
+            var movie2 = _movies.ElementAt(2);
 
             var read = await _cosmosClient.ExecuteGremlinSingle<MovieFullGraph>(
                 $"g.V().hasId(movieId).has('PartitionKey', movieTitle)",
@@ -199,12 +201,32 @@ namespace CosmosDb.Tests
         [TestMethod]
         public async Task ReadMultiWithSql()
         {
-            var read = await _cosmosClient.ExecuteSQL<MovieFullGraph>($"select * from c where c.label = 'MovieFullGraph'");
+            var read = await _cosmosClient.ExecuteSQL<MovieFullGraph>($"select * from c where c.label = 'Movie'");
             Assert.IsTrue(read.IsSuccessful);
+
+            var readDocs = await _cosmosClient.ReadVertices<MovieFullGraph>();
+            Assert.IsTrue(readDocs.IsSuccessful);
+
+            Assert.AreEqual(read.Result.Count(), readDocs.Result.Count());
         }
 
 
-        //TODO: test some weird traversals .tree(), .path(), etc.
+        [TestMethod]
+        public async Task GremlinTraversal1()
+        {
+            var read = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().limit(1).outE()");
+            Assert.IsTrue(read.IsSuccessful);
+
+            var readObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().limit(1).outE()");
+            Assert.IsTrue(readObj.IsSuccessful);
+        }
+
+        [TestMethod]
+        public async Task GremlinTraversal2()
+        {
+            var read = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().hasLabel('Movie').limit(1).out().tree()");
+            Assert.IsTrue(read.IsSuccessful);
+        }
 
         [TestMethod]
         public async Task InsertEdgeSingleWithVertexReference()

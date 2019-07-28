@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 
-namespace CosmosDb.Domain
+namespace CosmosDB.Net.Domain
 {
     internal static class PropertyHelpers
     {

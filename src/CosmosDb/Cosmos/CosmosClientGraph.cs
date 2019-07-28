@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using CosmosDb.Domain;
+using CosmosDB.Net.Domain;
 using Gremlin.Net.Driver;
 using Gremlin.Net.Driver.Exceptions;
 using Gremlin.Net.Structure.IO.GraphSON;
@@ -12,7 +11,7 @@ using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace CosmosDb
+namespace CosmosDB.Net
 {
     /// <summary>
     /// Wrapper class around the Azure.Comsos.CosmosClient class as well as the Gremlin.NET driver to be used when connecting to a CosmosDB Graph Database
@@ -55,7 +54,7 @@ namespace CosmosDb
         /// <returns>Reference to a Graph CosmosClient</returns>
         public static async Task<ICosmosClientGraph> GetClientWithSql(string accountName, string key, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
         {
-            var sqlClient = (CosmosClientSql)(await CosmosDb.CosmosClientSql.GetByAccountName(accountName, key, databaseId, containerId, initialContainerRUs, partitionKeyPath, forceCreate));
+            var sqlClient = (CosmosClientSql)(await CosmosDB.Net.CosmosClientSql.GetByAccountName(accountName, key, databaseId, containerId, initialContainerRUs, partitionKeyPath, forceCreate));
 
             var gremlinEndpoint = string.Format(CosmosClientGraph.GraphEndpointFormat, accountName);
             var server = new GremlinServer(gremlinEndpoint, 443, username: "/dbs/" + databaseId + "/colls/" + containerId, enableSsl: true, password: key);
@@ -151,17 +150,20 @@ namespace CosmosDb
                     var start = DateTime.Now;
                     var graphResult = await gremlinClient.SubmitAsync<object>(queryString, bindings);
                     var graphResultString = JsonConvert.SerializeObject(graphResult);
-                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString);
+                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString).ToArray();
 
-                    var res = graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
-
-                    return new CosmosResponse<IEnumerable<T>>
+                    var res = new CosmosResponse<IEnumerable<T>>
                     {
-                        Result = res,
                         StatusCode = System.Net.HttpStatusCode.OK,
                         RequestCharge = Helpers.GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
                         ExecutionTime = DateTime.Now.Subtract(start)
                     };
+                   
+                    res.Result = (typeof(T) == typeof(JObject) || typeof(T) == typeof(object)) 
+                                    ? graphResultJObject.Cast<T>() 
+                                    : graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+
+                    return res;
                 }
             }
             catch (ResponseException e)
@@ -220,9 +222,10 @@ namespace CosmosDb
         /// This call uses the SQL API to insert the vertices as documents.
         /// </summary>
         /// <param name="entities">Entites to insert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -230,11 +233,11 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> InsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> InsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureCosmosSqlClient();
             //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
         /// <summary>
@@ -255,9 +258,10 @@ namespace CosmosDb
         /// This call uses the SQL API to upsert the vertex]ices as a document.
         /// </summary>
         /// <param name="entities">Entites to upsert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -265,11 +269,11 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> UpsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> UpsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureCosmosSqlClient();
             //Could've used UpserVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(entities, (T entity) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphVertex<T>(entity)); }, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
 
@@ -360,9 +364,10 @@ namespace CosmosDb
         /// This call uses the SQL API to insert the edges as a document.
         /// </summary>
         /// <param name="edges">Edges to insert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -370,12 +375,12 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureCosmosSqlClient();
             
             //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.InsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
 
@@ -384,9 +389,10 @@ namespace CosmosDb
         /// This call uses the SQL API to upsert the edges as a document.
         /// </summary>
         /// <param name="edges">Edges to upsert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -394,12 +400,12 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureCosmosSqlClient();
 
             //Could've used InsertVertex instead of the lambda, but I don't want to the EnsureCosmosClient() for every call
-            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, threads, reportingIntervalS);
+            return CosmosSqlClient.ProcessMultipleDocuments(edges, (EdgeDefinition edgeDef) => { return CosmosSqlClient.UpsertDocumentInternal(CosmosSerializer.ToGraphEdge(edgeDef.EdgeEntity, edgeDef.SourceVertex, edgeDef.TargetVertex, edgeDef.Single)); }, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
 
@@ -419,6 +425,23 @@ namespace CosmosDb
 
             cosmosResult.Result = CosmosSerializer.FromGraphson<T>(res.Result);
             return cosmosResult;
+        }
+
+        /// <summary>
+        /// Gets all documents of the given type from the collection.
+        /// </summary>
+        /// <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+        /// <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+        /// <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+        /// <returns>Collection of results.</returns>
+        public Task<CosmosResponse<IEnumerable<T>>> ReadVertices<T>(string filter = "", string label = "", CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!string.IsNullOrEmpty(filter)) filter = "and " + filter;
+            if (string.IsNullOrEmpty(label)) label = CosmosEntitySerializer.GetLabelForType(typeof(T));
+
+            var query = $"select * from c where c.label = '{label}' {filter}";
+
+            return ExecuteSQL<T>(query, cancellationToken: cancellationToken);
         }
 
         /// <summary>

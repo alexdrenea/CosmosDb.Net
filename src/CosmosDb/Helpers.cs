@@ -1,9 +1,9 @@
-﻿using CosmosDb.Domain;
+﻿using CosmosDB.Net.Domain;
 using Microsoft.Azure.Cosmos;
 using System;
 using System.Collections.Generic;
 
-namespace CosmosDb
+namespace CosmosDB.Net
 {
     public static class Helpers
     {

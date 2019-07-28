@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace CosmosDb.Attributes
+namespace CosmosDB.Net.Domain.Attributes
 {
+    //TODO: Add Slug propety
     public class PartitionKeyAttribute : Attribute
     {
     }

@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.28902.138
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb", "src\CosmosDb\CosmosDb.csproj", "{34ADFD09-F98B-41C2-AB3F-E541512411C7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDB.Net", "src\CosmosDb\CosmosDB.Net.csproj", "{34ADFD09-F98B-41C2-AB3F-E541512411C7}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Domain", "src\CosmosDb.Domain\CosmosDb.Domain.csproj", "{B586C2CB-CA8D-4265-9ACA-538C136E9D55}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDB.Net.Domain", "src\CosmosDb.Domain\CosmosDB.Net.Domain.csproj", "{B586C2CB-CA8D-4265-9ACA-538C136E9D55}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CosmosDb.Tests", "tests\CosmosDb.Tests\CosmosDb.Tests.csproj", "{D8FB9183-B739-4D94-80A5-3311C5F390F6}"
 EndProject

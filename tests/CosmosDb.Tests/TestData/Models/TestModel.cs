@@ -1,4 +1,4 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Text;

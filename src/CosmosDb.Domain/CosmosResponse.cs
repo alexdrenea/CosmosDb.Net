@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace CosmosDb.Domain
+namespace CosmosDB.Net.Domain
 {
     /*
      Declared internal type to represent a cosmos response instead of using the types provided by the SDK (ItemResponse, Response, DatabaseResponse, etc.
@@ -44,6 +44,7 @@ namespace CosmosDb.Domain
         /// </summary>
         public string ContinuationToken { get; set; }
 
+        //TODO: collect the reuqest as well (what model was inserted)
     }
 
     public class CosmosResponse<T> : CosmosResponse

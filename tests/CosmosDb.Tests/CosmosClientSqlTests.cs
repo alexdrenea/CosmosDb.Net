@@ -1,5 +1,6 @@
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
+using CosmosDB.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -192,7 +193,15 @@ namespace CosmosDb.Tests
             Assert.IsTrue(read.IsSuccessful);
         }
 
-     
+
+        [TestMethod]
+        [Priority(10)]
+        public async Task ExecuteSqlCustomReturn()
+        {
+            var read = await _cosmosClient.ExecuteSQL<object>("select c.Title, c.Tagline, c.Overview from c");
+            Assert.IsTrue(read.IsSuccessful);
+        }
+
         //[TestMethod]
         //[Priority(10)]
         public async Task Upsert5000CosmosDocuments()
