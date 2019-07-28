@@ -1,5 +1,4 @@
-[![Build status](https://dev.azure.com/alexdrenea/CosmosDb.Net/_apis/build/status/CosmosDb.Net-Publish)](https://dev.azure.com/alexdrenea/CosmosDb.Net/_build/latest?definitionId=12)
-
+[![Build Status](https://dev.azure.com/alexdrenea/CosmosDb.Net/_apis/build/status/CosmosDb.Net-CI?branchName=master)](https://dev.azure.com/alexdrenea/CosmosDb.Net/_build/latest?definitionId=11&branchName=master)
 # CosmosDB.Net
 CosmosDB.Net is a library that helps development against an Azure Cosmos DB database - SQL or Graph. It is a wrapper over the latest stable official [Azure Cosmos DB .NET SDK Version 3.0](https://github.com/Azure/azure-cosmos-dotnet-v3) as well as the [Gremlin.NET](https://github.com/apache/tinkerpop/tree/master/gremlin-dotnet) driver. 
 
