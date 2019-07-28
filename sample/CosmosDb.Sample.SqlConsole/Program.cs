@@ -1,10 +1,10 @@
 ﻿using CosmosDb.Sample.Shared;
 using CosmosDb.Sample.Shared.Models;
-using CosmosDb.Sample.Shared.Models.Sql;
+using CosmosDb.Sample.Shared.Models.Domain;
+using CosmosDB.Net;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,7 +17,7 @@ namespace CosmosDb.Sample.SqlConsole
         private static string _accountKey;
         private static string _databaseId;
         private static string _containerId;
-        private static ICosmosClientSql _cosmosClient;
+        private static ICosmosClientSql _sqlClient;
 
         public static async Task Main(string[] args)
         {
@@ -33,6 +33,9 @@ namespace CosmosDb.Sample.SqlConsole
                 _databaseId = GetConfigValueOrDefault<string>(configuration, "DatabaseId", true);
                 _containerId = GetConfigValueOrDefault<string>(configuration, "ContainerId", true);
 
+                _sqlClient = await CosmosClientSql.GetByAccountName(_accountName, _accountKey, _databaseId, _containerId, forceCreate: false);
+
+                Console.Title = "CosmosDB.NET SQL Sample";
                 await new ConsoleREPL(new Program()).RunLoop();
             }
             catch (CosmosException cre)
@@ -68,7 +71,7 @@ namespace CosmosDb.Sample.SqlConsole
             //Upsert movies
             var startTime = DateTime.Now;
             ConsoleHelpers.ConsoleLine($"Inserting {numebrOfRecords} movies (using {threads} threads)...");
-            var upsertResult = await _cosmosClient.UpsertDocuments(movies.Take(numebrOfRecords), (res) => { ConsoleHelpers.ConsoleLine($"processed {res.Count()}/{numebrOfRecords} movies"); }, threads);
+            var upsertResult = await _sqlClient.UpsertDocuments(movies.Take(numebrOfRecords), (res) => { ConsoleHelpers.ConsoleLine($"processed {res.Count()}/{numebrOfRecords} movies"); }, threads: threads);
             ConsoleHelpers.PrintStats(upsertResult, DateTime.Now.Subtract(startTime).TotalSeconds);
         }
 
@@ -78,7 +81,7 @@ namespace CosmosDb.Sample.SqlConsole
         [ConsoleActionDisplayOrder(60)]
         public async Task GetMovieByTitleSql(string parameter)
         {
-            var movies = await _cosmosClient.ExecuteSQL<Movie>($"select * from c where c.label = 'Movie' and c.title = '{parameter}'");
+            var movies = await _sqlClient.ExecuteSQL<Movie>($"select * from c where c.label = 'Movie' and c.title = '{parameter}'");
 
             ConsoleHelpers.ConsoleLine(movies.Result);
             ConsoleHelpers.ConsoleLine($"Success: {movies.IsSuccessful}. Execution Time: {movies.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {movies.RequestCharge} RUs");
@@ -89,10 +92,10 @@ namespace CosmosDb.Sample.SqlConsole
         [ConsoleActionDisplayOrder(200)]
         public async Task ExecuteSql(string parameter)
         {
-            var result = await _cosmosClient.ExecuteSQL<dynamic>(parameter);
+            var result = await _sqlClient.ExecuteSQL<dynamic>(parameter);
 
             ConsoleHelpers.ConsoleLine($"{result.Result?.Count()} results.");
-            ConsoleHelpers.ConsoleLine(result.Result?.First());
+            //ConsoleHelpers.ConsoleLine(result.Result?.First());
             ConsoleHelpers.ConsoleLine($"Success: {result.IsSuccessful}. Execution Time: {result.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {result.RequestCharge.ToString("#.##")} RUs");
         }
 

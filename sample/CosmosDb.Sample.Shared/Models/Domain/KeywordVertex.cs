@@ -1,7 +1,8 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 
-namespace CosmosDb.Sample.Shared.Models.Graph
+namespace CosmosDb.Sample.Shared.Models.Domain
 {
+    [Label(Value = "Keyword")]
     public class KeywordVertex
     {
         [Id]

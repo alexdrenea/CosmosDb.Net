@@ -1,7 +1,8 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 
-namespace CosmosDb.Sample.Shared.Models.Graph
+namespace CosmosDb.Sample.Shared.Models.Domain
 {
+    [Label(Value = "Genre")]
     public class GenreVertex
     {
         [Id]
@@ -11,3 +12,4 @@ namespace CosmosDb.Sample.Shared.Models.Graph
         public string Pk { get; } = "Genre";
     }
 }
+ 

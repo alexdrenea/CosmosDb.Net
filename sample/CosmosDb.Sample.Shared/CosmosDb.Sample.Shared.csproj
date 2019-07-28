@@ -5,6 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Models\Graph\**" />
+    <Compile Remove="Models\Sql\**" />
+    <EmbeddedResource Remove="Models\Graph\**" />
+    <EmbeddedResource Remove="Models\Sql\**" />
+    <None Remove="Models\Graph\**" />
+    <None Remove="Models\Sql\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Data\movies_cast_lite.csv" />
     <None Remove="Data\movies_lite.csv" />
   </ItemGroup>
@@ -20,7 +29,7 @@
 
 
   <ItemGroup>
-    <PackageReference Include="CosmosDb.Domain" Version="3.0.3" />
+    <PackageReference Include="CosmosDB.Net.Domain" Version="3.0.0.2" />
     <PackageReference Include="CsvHelper" Version="12.1.2" />
   </ItemGroup>
   

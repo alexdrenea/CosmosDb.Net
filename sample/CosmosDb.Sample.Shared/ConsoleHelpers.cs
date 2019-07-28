@@ -1,4 +1,4 @@
-﻿using CosmosDb.Domain;
+﻿using CosmosDB.Net.Domain;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -15,7 +15,7 @@ namespace CosmosDb.Sample.Shared
         {
             if (color.HasValue)
                 Console.ForegroundColor = color.Value;
-            Console.WriteLine(entity != null ? JsonConvert.SerializeObject(entity) : "null");
+            Console.WriteLine(entity != null ? JsonConvert.SerializeObject(entity, Formatting.Indented) : "null");
             Console.ResetColor();
         }
 

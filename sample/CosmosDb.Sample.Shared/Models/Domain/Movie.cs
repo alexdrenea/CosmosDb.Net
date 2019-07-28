@@ -1,8 +1,8 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 using System;
 using System.Collections.Generic;
 
-namespace CosmosDb.Sample.Shared.Models.Sql
+namespace CosmosDb.Sample.Shared.Models.Domain
 {
     public enum MovieFormat
     {

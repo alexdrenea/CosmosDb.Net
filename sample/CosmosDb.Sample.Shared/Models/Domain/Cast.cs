@@ -1,11 +1,9 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
+using CosmosDb.Sample.Shared.Models.Csv;
 
-namespace CosmosDb.Sample.Shared.Models.Graph
+namespace CosmosDb.Sample.Shared.Models.Domain
 {
-    /// <summary>
-    /// Represents a character that an Actor has played in a Movie.
-    /// </summary>
-    public class CastVertex
+    public class Cast
     {
         [Id]
         public string Id => $"{MovieTitle}-{Order}";

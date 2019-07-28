@@ -1,6 +1,5 @@
 ﻿using CosmosDb.Sample.Shared.Models.Csv;
-using CosmosDb.Sample.Shared.Models.Graph;
-using CosmosDb.Sample.Shared.Models.Sql;
+using CosmosDb.Sample.Shared.Models.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -30,26 +29,6 @@ namespace CosmosDb.Sample.Shared.Models
             };
         }
 
-        public static MovieVertex ToMovieVertex(this MovieCsv movieCsv)
-        {
-            return new MovieVertex
-            {
-                TmdbId = movieCsv.TmdbId,
-                Budget = movieCsv.Budget,
-                Genres = movieCsv.Genres.Split(';').Select(g=>g.Trim().ToLower()).ToList(),
-                Keywords = movieCsv.Keywords.Split(';').Select(k => k.Trim().ToLower()).ToList(),
-                Language = movieCsv.Language,
-                Overview = movieCsv.Overview,
-                AvgRating = movieCsv.Rating,
-                Votes = movieCsv.Votes,
-                ReleaseDate = movieCsv.ReleaseDate,
-                Revenue = movieCsv.Revenue,
-                Runtime = movieCsv.Runtime,
-                Tagline = movieCsv.Tagline,
-                Title = movieCsv.Title
-            };
-        }
-
         public static Cast ToCast(this CastCsv castCsv)
         {
             return new Cast
@@ -63,17 +42,12 @@ namespace CosmosDb.Sample.Shared.Models
             };
         }
 
-        public static CastVertex ToCastVertex(this CastCsv castCsv)
+        public static IEnumerable<Actor> AllActors(this IEnumerable<Cast> cast)
         {
-            return new CastVertex
-            {
-                MovieTitle = castCsv.MovieTitle,
-                MovieId = castCsv.MovieId,
-                ActorName = castCsv.ActorName,
-                Character = castCsv.Character,
-                Order = castCsv.Order,
-                Uncredited = castCsv.Uncredited,
-            };
+            return cast.Select(c => c.ActorName.Trim().ToLower())
+                        .Distinct()
+                        .Select(n => new Actor { Name = n })
+                        .ToArray();
         }
 
         public static IEnumerable<KeywordVertex> AllKeywords(this IEnumerable<MovieCsv> movies)
@@ -94,11 +68,11 @@ namespace CosmosDb.Sample.Shared.Models
                          .ToArray();
         }
 
-        public static IEnumerable<ActorVertex> AllActors(this IEnumerable<CastCsv> cast)
+        public static IEnumerable<Actor> AllActors(this IEnumerable<CastCsv> cast)
         {
             return cast.Select(c => c.ActorName.Trim())
                          .Distinct()
-                         .Select(a => new ActorVertex { Name = a })
+                         .Select(a => new Actor { Name = a })
                          .ToArray();
         }
     }
