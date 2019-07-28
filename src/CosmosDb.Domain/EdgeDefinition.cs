@@ -1,4 +1,4 @@
-﻿namespace CosmosDb.Domain
+﻿namespace CosmosDB.Net.Domain
 {
     public class EdgeDefinition
     {

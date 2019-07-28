@@ -4,11 +4,10 @@ using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
 using System.Collections.Concurrent;
 using System.Threading;
-using CosmosDb.Domain;
+using CosmosDB.Net.Domain;
 using Microsoft.Azure.Cosmos;
-using System.Linq;
 
-namespace CosmosDb
+namespace CosmosDB.Net
 {
     /// <summary>
     /// Wrapper class around the Azure.Comsos.Container class to be used when connecting to a CosmosDB SQL database
@@ -205,18 +204,19 @@ namespace CosmosDb
         /// Insert multiple documents into the database using a TPL Dataflow block.
         /// </summary>
         /// <param name="documents">Documents to insert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <example>
         /// <![CDATA[
         /// await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, threads, reportingIntervalS);
+            return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
         /// <summary>
@@ -233,18 +233,19 @@ namespace CosmosDb
         /// Upsert (Insert or Update) multiple documents into the database using a TPL Dataflow block.
         /// </summary>
         /// <param name="documents">Documents to upsert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <example>
         /// <![CDATA[
         /// await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        public Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10)
+        public Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, threads, reportingIntervalS);
+            return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
 
@@ -396,24 +397,24 @@ namespace CosmosDb
             }
         }
 
-        //TODO: Add Support for cancellation token
-        internal async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, int threads = 4, int reportingIntervalS = 10)
+        internal async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (!reportingInterval.HasValue) reportingInterval = TimeSpan.FromSeconds(10);
             ConcurrentBag<CosmosResponse> cb = new ConcurrentBag<CosmosResponse>();
             Timer statsTimer = null;
-            if (reportingCallback != null && reportingIntervalS != -1)
+            if (reportingCallback != null)
             {
                 statsTimer = new Timer(_ =>
                 {
                     reportingCallback?.Invoke(cb.ToArray());
-                }, null, reportingIntervalS * 1000, reportingIntervalS * 1000);
+                }, null, (int)reportingInterval.Value.TotalMilliseconds, (int)reportingInterval.Value.TotalMilliseconds);
             }
 
             var actionBlock = new ActionBlock<T>(async (i) =>
             {
                 var res = await execute(i);
                 cb.Add(res);
-            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threads });
+            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threads, CancellationToken = cancellationToken });
 
             foreach (var i in documents)
             {

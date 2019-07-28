@@ -1,5 +1,6 @@
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
+using CosmosDB.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;

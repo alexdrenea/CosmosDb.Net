@@ -16,7 +16,8 @@
     <PackageIconUrl></PackageIconUrl>
     <RepositoryType>Git</RepositoryType>
     <RepositoryUrl>https://github.com/alexdrenea/CosmosDB.NET</RepositoryUrl>
-    <PackageTags>Azure CosmosDB Cosmos Gremlin Graph SQL</PackageTags>  
+    <PackageTags>Azure CosmosDB Cosmos Gremlin Graph SQL</PackageTags>
+    <AssemblyName>CosmosDB.Net</AssemblyName>  
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -39,7 +40,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CosmosDb.Domain\CosmosDb.Domain.csproj" />
+    <ProjectReference Include="..\CosmosDb.Domain\CosmosDB.Net.Domain.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,4 @@
-using CosmosDb.Domain;
+using CosmosDB.Net.Domain;
 using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using CosmosDB.Net;
 
 namespace CosmosDb.Tests
 {

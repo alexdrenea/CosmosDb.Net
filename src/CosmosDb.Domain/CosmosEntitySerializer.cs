@@ -1,15 +1,13 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.Dynamic;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace CosmosDb.Domain
+namespace CosmosDB.Net.Domain
 {
     public class CosmosEntitySerializer
     {

@@ -1,4 +1,4 @@
-﻿using CosmosDb.Domain;
+﻿using CosmosDB.Net.Domain;
 using Gremlin.Net.Driver;
 using Microsoft.Azure.Cosmos;
 using System;
@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace CosmosDb
+namespace CosmosDB.Net
 {
     public interface ICosmosClientGraph
     {
@@ -68,9 +68,10 @@ namespace CosmosDb
         /// This call uses the SQL API to insert the vertices as documents.
         /// </summary>
         /// <param name="entities">Entites to insert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -78,7 +79,7 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        Task<IEnumerable<CosmosResponse>> InsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+        Task<IEnumerable<CosmosResponse>> InsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Upsert (Create or Update) a vertex into the database.
@@ -94,9 +95,10 @@ namespace CosmosDb
         /// This call uses the SQL API to upsert the vertices as documents.
         /// </summary>
         /// <param name="entities">Entites to upsert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -104,7 +106,7 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        Task<IEnumerable<CosmosResponse>> UpsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+        Task<IEnumerable<CosmosResponse>> UpsertVertex<T>(IEnumerable<T> entities, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Insert an edge into the database by providing the Edge domain model and references to its source and target as domain models
@@ -180,9 +182,10 @@ namespace CosmosDb
         /// This call uses the SQL API to insert the edges as a document.
         /// </summary>
         /// <param name="edges">Edges to insert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -190,7 +193,7 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+        Task<IEnumerable<CosmosResponse>> InsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken));
 
 
         /// <summary>
@@ -198,9 +201,10 @@ namespace CosmosDb
         /// This call uses the SQL API to upsert the edges as a document.
         /// </summary>
         /// <param name="edges">Edges to upsert</param>
-        /// <param name="reportingCallback">[Optional] A method to be called every <paramref name="reportingIntervalS"/> seconds with an array of responses for all processed. Generally used to provide a progress update to callers. Defaults to null./></param>
-        /// <param name="reportingIntervalS">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
         /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
         /// <exception cref="InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="CosmosClientSql"/>.</exception>
         /// <example>
         /// <![CDATA[
@@ -208,7 +212,7 @@ namespace CosmosDb
         /// ]]>
         /// </example>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
-        Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, int threads = 4, int reportingIntervalS = 10);
+        Task<IEnumerable<CosmosResponse>> UpsertEdges(IEnumerable<EdgeDefinition> edges, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken));
 
 
         /// <summary>

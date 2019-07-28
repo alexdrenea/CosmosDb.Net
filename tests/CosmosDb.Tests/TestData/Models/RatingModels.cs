@@ -1,4 +1,4 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 using System;
 
 namespace CosmosDb.Tests.TestData.Models

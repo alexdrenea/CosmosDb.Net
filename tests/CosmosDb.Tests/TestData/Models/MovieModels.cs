@@ -1,4 +1,4 @@
-﻿using CosmosDb.Attributes;
+﻿using CosmosDB.Net.Domain.Attributes;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
