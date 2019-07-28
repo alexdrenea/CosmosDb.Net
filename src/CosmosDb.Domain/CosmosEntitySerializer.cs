@@ -390,7 +390,7 @@ namespace CosmosDB.Net.Domain
         }
 
 
-        private static bool IsTypeDirectlySerializableToGraph(Type t)
+        public static bool IsTypeDirectlySerializableToGraph(Type t)
         {
             var ti = t.GetTypeInfo();
             return ti.IsPrimitive || ti.IsEnum || t == typeof(DateTime) || t == typeof(string);

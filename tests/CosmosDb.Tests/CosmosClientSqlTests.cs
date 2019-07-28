@@ -2,6 +2,7 @@ using CosmosDb.Tests.TestData;
 using CosmosDb.Tests.TestData.Models;
 using CosmosDB.Net;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -201,6 +202,18 @@ namespace CosmosDb.Tests
             var read = await _cosmosClient.ExecuteSQL<object>("select c.Title, c.Tagline, c.Overview from c");
             Assert.IsTrue(read.IsSuccessful);
         }
+
+
+        [TestMethod]
+        [Priority(10)]
+        public async Task ExecuteSqlValueReturn()
+        {
+            var read3 = await _cosmosClient.ExecuteSQL<string>("SELECT VALUE c.Title FROM c where c.label = 'Movie'");
+            Assert.IsTrue(read3.IsSuccessful);
+        }
+
+
+
 
         //[TestMethod]
         //[Priority(10)]

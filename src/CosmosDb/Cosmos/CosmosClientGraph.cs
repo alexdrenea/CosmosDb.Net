@@ -148,20 +148,27 @@ namespace CosmosDB.Net
                 using (var gremlinClient = GetGremlinClient())
                 {
                     var start = DateTime.Now;
-                    var graphResult = await gremlinClient.SubmitAsync<object>(queryString, bindings);
+                    var graphResult = await gremlinClient.SubmitAsync<dynamic>(queryString, bindings);
                     var graphResultString = JsonConvert.SerializeObject(graphResult);
-                    var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString).ToArray();
-
+                 
                     var res = new CosmosResponse<IEnumerable<T>>
                     {
                         StatusCode = System.Net.HttpStatusCode.OK,
                         RequestCharge = Helpers.GetValueOrDefault<double>(graphResult.StatusAttributes, RESULTSET_ATTRIBUTE_RU),
                         ExecutionTime = DateTime.Now.Subtract(start)
                     };
-                   
-                    res.Result = (typeof(T) == typeof(JObject) || typeof(T) == typeof(object)) 
-                                    ? graphResultJObject.Cast<T>() 
-                                    : graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+
+                    if (CosmosEntitySerializer.IsTypeDirectlySerializableToGraph(typeof(T)))
+                    {
+                        res.Result = JsonConvert.DeserializeObject<IEnumerable<T>>(graphResultString).ToArray();
+                    }
+                    else
+                    {
+                        var graphResultJObject = JsonConvert.DeserializeObject<IEnumerable<JObject>>(graphResultString).ToArray();
+                        res.Result = (typeof(T) == typeof(JObject) || typeof(T) == typeof(object))
+                                        ? graphResultJObject.Cast<T>()
+                                        : graphResultJObject.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+                    }
 
                     return res;
                 }
@@ -456,10 +463,14 @@ namespace CosmosDB.Net
         public async Task<CosmosResponse<IEnumerable<T>>> ExecuteSQL<T>(string query, bool pagedResults = false, string continuationToken = "", CancellationToken cancellationToken = default(CancellationToken))
         {
             EnsureCosmosSqlClient();
-            var res = await CosmosSqlClient.ExecuteSQL<JObject>(query, pagedResults, continuationToken, cancellationToken);
+            if (CosmosEntitySerializer.IsTypeDirectlySerializableToGraph(typeof(T)))
+            {
+                return await CosmosSqlClient.ExecuteSQL<T>(query, pagedResults, continuationToken, cancellationToken);
+            }
 
+            var res = await CosmosSqlClient.ExecuteSQL<JObject>(query, pagedResults, continuationToken, cancellationToken);
             var cosmosResult = res.Clone<IEnumerable<T>>();
-            if (typeof(T) == typeof(JObject))
+            if (typeof(T) == typeof(JObject) || typeof(T) == typeof(object))
                 return cosmosResult;
 
             if (!res.IsSuccessful)
