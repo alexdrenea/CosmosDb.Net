@@ -15,8 +15,8 @@ namespace CosmosDb.Sample.Shared.Models
             {
                 TmdbId = movieCsv.TmdbId,
                 Budget = movieCsv.Budget,
-                Genres = movieCsv.Genres.Split(';').Select(g => g.Trim().ToLower()).ToList(),
-                Keywords = movieCsv.Keywords.Split(';').Select(k => k.Trim().ToLower()).ToList(),
+                Genres = movieCsv.Genres.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(g => g.Trim().ToLower()).ToList(),
+                Keywords = movieCsv.Keywords.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).Select(k => k.Trim().ToLower()).ToList(),
                 Language = movieCsv.Language,
                 Overview = movieCsv.Overview,
                 AvgRating = movieCsv.Rating,
@@ -44,7 +44,7 @@ namespace CosmosDb.Sample.Shared.Models
 
         public static IEnumerable<Actor> AllActors(this IEnumerable<Cast> cast)
         {
-            return cast.Select(c => c.ActorName.Trim().ToLower())
+            return cast.Select(c => c.ActorName)
                         .Distinct()
                         .Select(n => new Actor { Name = n })
                         .ToArray();
