@@ -4,8 +4,32 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Models\Graph\**" />
+    <Compile Remove="Models\Sql\**" />
+    <EmbeddedResource Remove="Models\Graph\**" />
+    <EmbeddedResource Remove="Models\Sql\**" />
+    <None Remove="Models\Graph\**" />
+    <None Remove="Models\Sql\**" />
+  </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Data\movies_cast_lite.csv" />
+    <None Remove="Data\movies_lite.csv" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Data\movies_cast_lite.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Data\movies_lite.csv">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <PackageReference Include="CosmosDB.Net.Domain" Version="3.0.0.3" />
     <PackageReference Include="CsvHelper" Version="12.1.2" />
   </ItemGroup>
   
