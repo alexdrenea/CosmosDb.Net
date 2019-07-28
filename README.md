@@ -8,16 +8,28 @@ Install using nuget: `nuget install Gremlin.Net`
 ### CosmosClientSql
 The `CosmosClientSql` class is a wrapper over Cosmos Client that enables calls via the SQL API. The wrapper exposes the underlaying Cosmos SDK objects so a caller can access the full functionality of the SDK.
 
-To get an instance of the client, use one of the many static initializer methods found on the `CosmosClientSql` class:
+To get an instance of the client, use one of the static initializer methods found on the `CosmosClientSql` class:
  - `CosmosClientSql.GetByAccountEndpoint(...)` initializes a client based on the Account Endpoint (https://_yourAccountEndpoint_.documents.azure.com:443/) and Account Key
  - `CosmosClientSql.GetByConnectionString(...)` initializes a client based on a CosmosDB Connection String (AccountEndpoint=_yourAccountEndpoint_;AccountKey=_yourAccountKey_;
  - `CosmosClientSql.GetByAccountName(...)` initializes a client based on the Account name and Account Key
 
-There are also options for the initializer to automatically create the database and collection in case they do not exist, in which case additional parameters such as Scale (RUs) and PartitionKeyPath need to be provided.
+```csharp
+ //Initialize a CosmosClientSql. If database or container do not exist, throw and exception.
+ var sqlClient = await CosmosClientSql.GetByAccountName(accountName, accountKey, databaseId, containerId);
+```
+
+There are also options for the initializer to automatically create the database and collection in case they do not exist, in which case an additional parameter `CreateOptions` must be provided:
 
 ```csharp
- //Initialize a CosmosClientSql
- var sqlClient = await CosmosClientSql.GetByAccountName(accountName, accountKey, databaseId, containerId);
+ //Initialize a CosmosClientSql. If database and container do not exist, initialize them with a 1000Ru Database throughput and a Partition Key under the `pk` property
+ var sqlClient = await CosmosClientSql.GetByConnectionString(
+								connectionString, 
+								databaseId, 
+								containerId, 
+								new CreateOptions(databaseId, databaseId, "/pk") 
+								{ 
+									DatabaseThrouhput = 1000
+								});
 ```
 
 ### CosmosClientGraph

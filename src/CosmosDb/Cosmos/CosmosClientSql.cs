@@ -27,138 +27,82 @@ namespace CosmosDB.Net
         public Container Container { get; private set; }
 
         #region Initialization
-        //TODO: provision RU at database level
+
 
         /// <summary>
         /// Initialize a CosmosClient by providing the accountName and key.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.
+        /// If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+        /// If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+        /// If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
         /// </summary>
         /// <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerId">Name of the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.</exception>
+        /// <param name="databaseId">Id of the Database to connect to.</param>
+        /// <param name="containerId">Id of the Container to connect to.</param>
+        /// <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+        /// <exception cref="Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
         /// <returns>Reference to a Sql CosmosClient</returns>
-        public static Task<ICosmosClientSql> GetByAccountName(string accountName, string key, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
+        public static Task<ICosmosClientSql> GetByAccountName(string accountName, string key, string databaseId, string containerId, CreateOptions createOptions = null)
         {
             var accountEndpoint = string.Format(CosmosClientSql.SqlAccountEndpointFormat, accountName);
-            return GetByAccountEndpoint(accountEndpoint, key, databaseId, containerId, initialContainerRUs, partitionKeyPath, forceCreate);
+            return GetByAccountEndpoint(accountEndpoint, key, databaseId, containerId, createOptions);
         }
 
         /// <summary>
         /// Initialize a CosmosClient by providing the accountName and key.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.
+        /// If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+        /// If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+        /// If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
         /// </summary>
         /// <param name="connectionString">Connection String to a CosmosDB. (i.e. AccountEndpoint=***;AccountKey=***;)</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerId">Name of the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.</exception>
+        /// <param name="databaseId">Id of the Database to connect to.</param>
+        /// <param name="containerId">Id of the Container to connect to.</param>
+        /// <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+        /// <exception cref="Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
         /// <returns>Reference to a Sql CosmosClient</returns>
-        public static Task<ICosmosClientSql> GetByConnectionString(string connectionString, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
+        public static Task<ICosmosClientSql> GetByConnectionString(string connectionString, string databaseId, string containerId, CreateOptions createOptions = null)
         {
             var cco = new CosmosClientOptions()
             {
                 ConnectionMode = ConnectionMode.Direct,
                 RequestTimeout = new TimeSpan(1, 0, 0),
             };
-
-            var ccs = new ContainerProperties
-            {
-                Id = containerId,
-                PartitionKeyPath = partitionKeyPath
-            };
-            return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, ccs, initialContainerRUs, forceCreate);
+            return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, containerId, createOptions);
         }
 
         /// <summary>
         /// Initialize a CosmosClient by providing the accountName and key.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or container are not found, method will throw exception.
-        /// </summary>
-        /// <param name="connectionString">Connection String to a CosmosDB. (i.e. AccountEndpoint=***;AccountKey=***;)</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerProperties">ContainerSettings that define the name and other properties for the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or container are not found, method will throw exception.</exception>
-        /// <returns>Reference to a Sql CosmosClient</returns>
-        public static Task<ICosmosClientSql> GetByConnectionString(string connectionString, string databaseId, ContainerProperties containerProperties, int initialContainerRUs = 400, bool forceCreate = true)
-        {
-            var cco = new CosmosClientOptions()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                RequestTimeout = new TimeSpan(1, 0, 0),
-            };
-            return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, containerProperties, initialContainerRUs, forceCreate);
-        }
-
-        /// <summary>
-        /// Initialize a CosmosClient by providing the accountName and key.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.
+        /// If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+        /// If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+        /// If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
         /// </summary>
         /// <param name="accountEndpoint">Endpoint of the Cosmos account to connect to. (i.e https://youraccount.documents.azure.com:443/) </param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerId">Name of the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.</exception>
+        /// <param name="databaseId">Id of the Database to connect to.</param>
+        /// <param name="containerId">Id of the Container to connect to.</param>
+        /// <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+        /// <exception cref="Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
         /// <returns>Reference to a Sql CosmosClient</returns>
-        public static Task<ICosmosClientSql> GetByAccountEndpoint(string accountEndpoint, string key, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
+        public static Task<ICosmosClientSql> GetByAccountEndpoint(string accountEndpoint, string key, string databaseId, string containerId, CreateOptions createOptions = null)
         {
             var cco = new CosmosClientOptions()
             {
                 ConnectionMode = ConnectionMode.Direct,
                 RequestTimeout = new TimeSpan(1, 0, 0),
             };
-
-            var ccs = new ContainerProperties
-            {
-                Id = containerId,
-                PartitionKeyPath = partitionKeyPath
-            };
-
-            return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, cco), databaseId, ccs, initialContainerRUs, forceCreate);
-        }
-
-        /// <summary>
-        /// Initialize a CosmosClient by providing the accountName and key.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or container are not found, method will throw exception.
-        /// </summary>
-        /// <param name="accountEndpoint">Endpoint of the Cosmos account to connect to. (i.e https://youraccount.documents.azure.com:443/) </param>
-        /// <param name="key">Account Key from the Key blade in the portal</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerProperties">ContainerSettings that define the name and other properties for the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or container are not found, method will throw exception.</exception>
-        /// <returns>Reference to a Sql CosmosClient</returns>
-        public static Task<ICosmosClientSql> GetByAccountEndpoint(string accountEndpoint, string key, string databaseId, ContainerProperties containerProperties, int initialContainerRUs = 400, bool forceCreate = true)
-        {
-            var cco = new CosmosClientOptions()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                RequestTimeout = new TimeSpan(1, 0, 0),
-            };
-            return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, cco), databaseId, containerProperties, initialContainerRUs, forceCreate);
+            return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, cco), databaseId, containerId, createOptions);
         }
 
 
-        private static async Task<ICosmosClientSql> GetCosmosDbClientInternal(CosmosClient client, string databaseId, ContainerProperties containerProperties, int initialContainerRUs, bool forceCreate)
+        private static async Task<ICosmosClientSql> GetCosmosDbClientInternal(CosmosClient client, string databaseId, string containerId, CreateOptions createOptions = null)
         {
             Database database = null;
             Container container = null;
 
-            if (forceCreate)
+            if (createOptions != null)
             {
-                database = await client.CreateDatabaseIfNotExistsAsync(databaseId);
-                container = await database.CreateContainerIfNotExistsAsync(containerProperties, initialContainerRUs);
+                database = await client.CreateDatabaseIfNotExistsAsync(databaseId, createOptions.DatabaseThrouhput);
+                container = await database.CreateContainerIfNotExistsAsync(createOptions.Container, createOptions.ContainerThroughput);
             }
             else
             {
@@ -167,10 +111,10 @@ namespace CosmosDB.Net
                 if (ensureDbExists.StatusCode == System.Net.HttpStatusCode.NotFound)
                     throw new Exception($"Database '{databaseId}' not found. Use forceCreate:true if you want the database to be created for you.");
 
-                container = database.GetContainer(containerProperties.Id);
+                container = database.GetContainer(containerId);
                 var ensureExists = await container.ReadContainerAsync();
                 if (ensureExists.StatusCode == System.Net.HttpStatusCode.NotFound)
-                    throw new Exception($"Container '{containerProperties.Id}' not found. Use forceCreate:true if you want a collection to be created for you.");
+                    throw new Exception($"Container '{containerId}' not found. Use forceCreate:true if you want a collection to be created for you.");
             }
 
 
@@ -258,7 +202,7 @@ namespace CosmosDB.Net
             try
             {
                 var start = DateTime.Now;
-              
+
                 var res = await Container.ReadItemAsync<T>(docId, new PartitionKey(partitionKey));
 
                 var cr = res.ToCosmosResponse<T, T>(DateTime.Now.Subtract(start));
@@ -338,7 +282,7 @@ namespace CosmosDB.Net
             }
         }
 
-      
+
         /// <summary>
         /// Dispose of cosmos client
         /// </summary>

@@ -41,20 +41,20 @@ namespace CosmosDB.Net
 
         /// <summary>
         /// Initialize a SQL backed Cosmos Graph Client.
-        /// If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.
+        /// If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+        /// If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+        /// If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
         /// </summary>
         /// <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
         /// <param name="key">Account Key from the Key blade in the portal</param>
-        /// <param name="databaseId">Name of the Database to connect to.</param>
-        /// <param name="containerId">Name of the Container to connect to.</param>
-        /// <param name="forceCreate">Indicates if should create a new database and container if they are not present.</param>
-        /// <param name="initialContainerRUs">[Optional] Throughput to request at the container level. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <param name="partitionKeyPath">[Optional] PartitionKey descriptor. Must start with a / and a property with this name must exsit in every document that will be inserted in this collection. Parameter only valid if <paramref name="forceCreate"/> is true and a container is being created.</param>
-        /// <exception cref="Exception">If <paramref name="forceCreate"/> is false and <paramref name="databaseId"/> or <paramref name="containerId"/> are not found, method will throw exception.</exception>
+        /// <param name="databaseId">Id of the Database to connect to.</param>
+        /// <param name="containerId">Id of the Container to connect to.</param>
+        /// <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+        /// <exception cref="Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
         /// <returns>Reference to a Graph CosmosClient</returns>
-        public static async Task<ICosmosClientGraph> GetClientWithSql(string accountName, string key, string databaseId, string containerId, int initialContainerRUs = 400, string partitionKeyPath = "/PartitionKey", bool forceCreate = true)
+        public static async Task<ICosmosClientGraph> GetClientWithSql(string accountName, string key, string databaseId, string containerId, CreateOptions createOptions = null)
         {
-            var sqlClient = (CosmosClientSql)(await CosmosDB.Net.CosmosClientSql.GetByAccountName(accountName, key, databaseId, containerId, initialContainerRUs, partitionKeyPath, forceCreate));
+            var sqlClient = (CosmosClientSql)(await CosmosDB.Net.CosmosClientSql.GetByAccountName(accountName, key, databaseId, containerId, createOptions));
 
             var gremlinEndpoint = string.Format(CosmosClientGraph.GraphEndpointFormat, accountName);
             var server = new GremlinServer(gremlinEndpoint, 443, username: "/dbs/" + databaseId + "/colls/" + containerId, enableSsl: true, password: key);
