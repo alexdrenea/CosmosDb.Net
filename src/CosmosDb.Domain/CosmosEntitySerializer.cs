@@ -245,6 +245,35 @@ namespace CosmosDB.Net.Domain
 
         /// <summary>
         /// When reading a vertex from a graph database using either SQL or Gremlin.NET Api, we need to convert the incoming graphson result into the model.
+        /// IF the  caller does not know the type and calls this with a generic type (JObject, object or dynamic)
+        /// </summary>
+        public JObject FromGraphsonToJobject(JObject document)
+        {
+            if (document == null) return default(JObject);
+            var entity = new JObject();
+
+            //If document was read via the Sql API, then its representation will contain all properties at the root of the JObject, and the values will be found under the `_value` property
+            var graphsonValuePropName = "_value";
+            var graphson = document;
+            //If document was read via the Gremlin API, then its representation will contain all properties in a 'properties' JObject, and the values will be found under the `value` property
+            var properties = document["properties"] as JObject;
+            if (properties != null)
+            {
+                graphson = properties;
+                graphsonValuePropName = "value";
+            }
+
+            foreach (var p in graphson)
+            {
+                var value = p.Value.FirstOrDefault()?[graphsonValuePropName]?.ToString() ?? p.Value.ToString();
+                entity.Add(p.Key, JToken.FromObject(value));
+            }
+
+            return entity;
+        }
+
+        /// <summary>
+        /// When reading a vertex from a graph database using either SQL or Gremlin.NET Api, we need to convert the incoming graphson result into the model.
         /// </summary>
         public T FromGraphson<T>(JObject document)
         {

@@ -470,13 +470,17 @@ namespace CosmosDB.Net
 
             var res = await CosmosSqlClient.ExecuteSQL<JObject>(query, pagedResults, continuationToken, cancellationToken);
             var cosmosResult = res.Clone<IEnumerable<T>>();
-            if (typeof(T) == typeof(JObject) || typeof(T) == typeof(object))
-                return cosmosResult;
-
             if (!res.IsSuccessful)
                 return cosmosResult;
 
-            cosmosResult.Result = res.Result.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+            if (typeof(T) == typeof(JObject) || typeof(T) == typeof(object))
+            {
+                cosmosResult.Result = res.Result.Select(CosmosSerializer.FromGraphsonToJobject).Cast<T>().ToArray();
+            }
+            else
+            {
+                cosmosResult.Result = res.Result.Select(CosmosSerializer.FromGraphson<T>).ToArray();
+            }
 
             return cosmosResult;
         }

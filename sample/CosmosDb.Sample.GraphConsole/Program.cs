@@ -303,6 +303,29 @@ namespace CosmosDb.Sample.GraphConsole
             ConsoleHelpers.ConsoleLine($"Success: {movies.IsSuccessful}. Execution Time: {movies.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {movies.RequestCharge} RUs");
         }
 
+        [ConsoleActionTrigger("g.gb", "g.bybydget")]
+        [ConsoleActionDescription("Run a gremlin traversal that retuns movies grouped by budget")]
+        [ConsoleActionDisplayOrder(70)]
+        public async Task GetMoviesGoupedByBudget(string parameter)
+        {
+            //g.V().hasLabel('Movie').group().by('Budget').by(valueMap('Title','Tagline'))
+            //g.V().hasLabel('Movie').group().by('Budget').by('Title'))
+            //g.V().hasLabel('Movie').group().by('Budget')
+
+
+            //Traversals that don't return a specific model or scalar value, have to be called with JObject.
+            var moviesGroupByResult = await _graphClient.ExecuteGremlin<JObject>($"g.V().hasLabel('Movie').group().by('Budget').by('Title')");
+            
+            //A groupBy Statement returns an array with one element;
+            var moviesGroupBy = moviesGroupByResult.Result.First();
+            //The results of the query are an array of JProperty where the Name is the value of the first by() statement and the value is an array of elements.
+            var movieGroupByKeyValues = moviesGroupBy.Children<JProperty>();
+
+            var res = movieGroupByKeyValues.ToDictionary(k => int.Parse(k.Name), v => v.Values().Select(vv=>vv.ToString()));
+
+            ConsoleHelpers.ConsoleLine($"Success: {moviesGroupByResult.IsSuccessful}. Execution Time: {moviesGroupByResult.ExecutionTime.TotalSeconds.ToString("#.##")} s. Execution cost: {moviesGroupByResult.RequestCharge} RUs");
+        }
+
         [ConsoleActionTrigger("q", "sql")]
         [ConsoleActionDescription("Run a query")]
         [ConsoleActionDisplayOrder(200)]

@@ -17,8 +17,8 @@ namespace CosmosDb.Tests
 #endif
     public class CosmosClientGremlinTests
     {
-        private static string accountName = "f0887a1a-0ee0-4-231-b9ee";
-        private static string accountKey = "whnySIy325FgHd9h6iex6i0IRZ0QsJYRlmAjzURFD468TPYuh4jA9DfUFwNfXReJq85S54pUnxXJknWFczQvNw==";
+        private static string accountName = "34a6e584-0ee0-4-231-b9ee";
+        private static string accountKey = "8C9KwxNJdq45sC66KApaEORJ4DVGcYXssJBuqFIBj66ok5SkpBhKURD4TWSD2Xfx4KelLW4dcOO1agkBR6feZg==";
 
         private static string databaseId = "core";
         private static string containerId = "test1";
@@ -203,14 +203,33 @@ namespace CosmosDb.Tests
         {
             var readMovies = await _cosmosClient.ExecuteSQL<MovieFullGraph>($"select * from c where c.label = 'Movie'");
             Assert.IsTrue(readMovies.IsSuccessful);
+            Assert.IsNotNull(readMovies.Result);
 
             var readVertices = await _cosmosClient.ReadVertices<MovieFullGraph>();
             Assert.IsTrue(readVertices.IsSuccessful);
+            Assert.IsNotNull(readVertices.Result);
 
             Assert.AreEqual(readMovies.Result.Count(), readVertices.Result.Count());
 
             var read = await _cosmosClient.ExecuteSQL<string>($"SELECT VALUE c.Title[0]._value FROM c where c.label = 'Movie'");
             Assert.IsTrue(read.IsSuccessful);
+            Assert.IsNotNull(read.Result);
+        }
+
+        [TestMethod]
+        public async Task ReadMultiJObjectWithSql()
+        {
+            var readMoviesJObject = await _cosmosClient.ExecuteSQL<JObject>($"select * from c where c.label = 'Movie'");
+            Assert.IsTrue(readMoviesJObject.IsSuccessful);
+            Assert.IsNotNull(readMoviesJObject.Result);
+
+            var readMoviesDynamic = await _cosmosClient.ExecuteSQL<dynamic>($"select * from c where c.label = 'Movie'");
+            Assert.IsTrue(readMoviesDynamic.IsSuccessful);
+            Assert.IsNotNull(readMoviesDynamic.Result);
+
+            var readMoviesObject = await _cosmosClient.ExecuteSQL<object>($"select * from c where c.label = 'Movie'");
+            Assert.IsTrue(readMoviesObject.IsSuccessful);
+            Assert.IsNotNull(readMoviesObject.Result);
         }
 
 
@@ -225,15 +244,19 @@ namespace CosmosDb.Tests
 
             var readOut = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().limit(1).outE()");
             Assert.IsTrue(readOut.IsSuccessful);
+            Assert.IsNotNull(readOut.Result);
 
             var readOutObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().limit(1).outE()");
             Assert.IsTrue(readOutObj.IsSuccessful);
+            Assert.IsNotNull(readOutObj.Result);
 
             var readTree = await _cosmosClient.ExecuteGremlin<JObject>($"g.V().hasLabel('Movie').limit(1).out().tree()");
             Assert.IsTrue(readTree.IsSuccessful);
+            Assert.IsNotNull(readTree.Result);
 
             var readTreeObj = await _cosmosClient.ExecuteGremlin<object>($"g.V().hasLabel('Movie').limit(1).out().tree()");
             Assert.IsTrue(readTreeObj.IsSuccessful);
+            Assert.IsNotNull(readTreeObj.Result);
         }
 
         [TestMethod]
