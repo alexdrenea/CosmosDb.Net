@@ -2,7 +2,7 @@ name: Build
 
 on: [push]
 env:
-  DOTNET_VERSION: '2.1.607'           # set this to the dot net version to use
+  DOTNET_VERSION: '2.2.108'           # set this to the dot net version to use
 
 jobs:
   build:
