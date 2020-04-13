@@ -20,6 +20,6 @@ jobs:
     - name: Run Tests
       run: dotnet test tests/**/*.csproj --configuration Release
     - name: Package CosmosDB.Domain
-      run: dotnet pack **/CosmosDB.Net.Domain.csproj
+      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj
     - name: Package CosmosDB SDK
-      run: dotnet pack **/CosmosDB.Net.csproj
+      run: dotnet pack src/**/CosmosDB.Net.csproj
