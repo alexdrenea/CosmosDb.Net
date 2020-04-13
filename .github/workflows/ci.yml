@@ -35,15 +35,3 @@ jobs:
       with:
         name: nupkg
         path: src/CosmosDb/nupkg
-        
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v1
-      with:
-        name: nupkg
-        path: nupkg
-    - name: push package
-      run: dotnet nuget push "nupkg/*.nupkg" --source "github"
