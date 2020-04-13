@@ -28,5 +28,5 @@ jobs:
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1
       with:
-        name: nupkg
+        name: nupkg/*
         path: nupkg
