@@ -1,4 +1,5 @@
-[![Build Status](https://dev.azure.com/alexdrenea/CosmosDb.Net/_apis/build/status/CosmosDb.Net-CI?branchName=master)](https://dev.azure.com/alexdrenea/CosmosDb.Net/_build/latest?definitionId=11&branchName=master)
+![Build](https://github.com/alexdrenea/CosmosDb.Net/workflows/Build/badge.svg)
+
 # CosmosDB.Net
 CosmosDB.Net is a library that helps development against an Azure Cosmos DB database - SQL or Graph. It is a wrapper over the latest stable official [Azure Cosmos DB .NET SDK Version 3.0](https://github.com/Azure/azure-cosmos-dotnet-v3) as well as the [Gremlin.NET](https://github.com/apache/tinkerpop/tree/master/gremlin-dotnet) driver. 
 
@@ -169,7 +170,7 @@ var graphMoviesResult1 = await _graphClient.ExecuteGremlin<Movie>("g.V().hasLabe
 var graphMoviesResult2 = await _graphClient.ExecuteSQL<Movie>("select * from c where c.label = 'Movie'");
 ```
 
-Lastly, there’s a helper method to get all objects of the same type and filter:
+Lastly, thereÂ’s a helper method to get all objects of the same type and filter:
 
 ```csharp
 //**SQL:**
