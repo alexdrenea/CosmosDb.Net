@@ -18,4 +18,4 @@ jobs:
         path: nupkg
     
     - name: push package
-      run: dotnet nuget push "nupkg/*.nupkg" -k {{NUGET_KEY}} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push "nupkg/*.nupkg" -k ${{ NUGET_KEY }} -s https://api.nuget.org/v3/index.json
