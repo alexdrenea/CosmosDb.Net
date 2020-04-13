@@ -3,7 +3,7 @@ name: Build
 on: [push]
 env:
   DOTNET_VERSION: '2.2.108'           # set this to the dot net version to use
-
+  Configuration: Release
 jobs:
   build:
 
@@ -16,10 +16,15 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
     - name: Build Projects
-      run: dotnet build --configuration Release
+      run: dotnet build --configuration ${{ env.Configuration }}
     - name: Run Tests
-      run: dotnet test tests/**/*.csproj --configuration Release
+      run: dotnet test tests/**/*.csproj --configuration ${{ env.Configuration }}
     - name: Package CosmosDB.Domain
-      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj
+      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj ${{ env.Configuration }}
     - name: Package CosmosDB SDK
-      run: dotnet pack src/**/CosmosDB.Net.csproj
+      run: dotnet pack src/**/CosmosDB.Net.csproj ${{ env.Configuration }}
+    - name: Publish Artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: nugets
+        path: src/**/*.nupkg 
