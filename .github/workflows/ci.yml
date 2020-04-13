@@ -22,11 +22,11 @@ jobs:
       run: dotnet test tests/**/*.csproj --configuration ${{ env.Configuration }}
       
     - name: Package CosmosDB.Domain
-      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj --configuration ${{ env.Configuration }} -o /nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
+      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj --configuration ${{ env.Configuration }} -o nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
     - name: Package CosmosDB SDK
-      run: dotnet pack src/**/CosmosDB.Net.csproj --configuration ${{ env.Configuration }} -o /nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
+      run: dotnet pack src/**/CosmosDB.Net.csproj --configuration ${{ env.Configuration }} -o nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1
       with:
         name: nupkg
-        path: nupkg
+        path: src/**/nupkg
