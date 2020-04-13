@@ -21,14 +21,14 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <DocumentationFile>\bin\Debug\netstandard2.0\CosmosDb.xml</DocumentationFile>
+    <DocumentationFile>CosmosDb.xml</DocumentationFile>
     <OutputPath></OutputPath>
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <OutputPath></OutputPath>
-    <DocumentationFile>\bin\Release\netstandard2.0\CosmosDb.xml</DocumentationFile>
+    <DocumentationFile>CosmosDb.xml</DocumentationFile>
     <NoWarn>1701;1702;1591</NoWarn>
   </PropertyGroup>
 

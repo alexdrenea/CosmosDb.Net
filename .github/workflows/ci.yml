@@ -1,0 +1,37 @@
+name: Build
+
+on: [push]
+env:
+  DOTNET_VERSION: '2.2.108'           # set this to the dot net version to use
+  Configuration: Release
+  NugetVersion: '3.0.' 
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+    - name: Build Projects
+      run: dotnet build --configuration ${{ env.Configuration }}
+    - name: Run Tests
+      run: dotnet test tests/**/*.csproj --configuration ${{ env.Configuration }}
+      
+    - name: Package CosmosDB.Domain
+      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj --configuration ${{ env.Configuration }} -o nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
+    - name: Package CosmosDB SDK
+      run: dotnet pack src/**/CosmosDB.Net.csproj --configuration ${{ env.Configuration }} -o nupkg -p:PackageVersion=${{ env.NugetVersion }}${{ github.run_number }}
+    - name: Publish CosmosDB Domain Artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: nupkg
+        path: src/CosmosDb.Domain/nupkg
+    - name: Publish CosmosDB SDK Artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: nupkg
+        path: src/CosmosDb/nupkg
