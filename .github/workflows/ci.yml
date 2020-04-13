@@ -1,6 +1,8 @@
 name: Build
 
 on: [push]
+env:
+  DOTNET_VERSION: '2.1.607'           # set this to the dot net version to use
 
 jobs:
   build:
@@ -12,8 +14,12 @@ jobs:
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.0.101
+        dotnet-version: ${{ DOTNET_VERSION }}
     - name: Build Projects
       run: dotnet build --configuration Release
     - name: Run Tests
       run: dotnet test tests/**/*.csproj --configuration Release
+    - name: Package CosmosDB.Domain
+      run: dotnet pack **/CosmosDB.Net.Domain.csproj
+    - name: Package CosmosDB SDK
+      run: dotnet pack **/CosmosDB.Net.csproj
