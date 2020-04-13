@@ -20,9 +20,9 @@ jobs:
     - name: Run Tests
       run: dotnet test tests/**/*.csproj --configuration ${{ env.Configuration }}
     - name: Package CosmosDB.Domain
-      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj ${{ env.Configuration }}
+      run: dotnet pack src/**/CosmosDB.Net.Domain.csproj --configuration ${{ env.Configuration }}
     - name: Package CosmosDB SDK
-      run: dotnet pack src/**/CosmosDB.Net.csproj ${{ env.Configuration }}
+      run: dotnet pack src/**/CosmosDB.Net.csproj --configuration ${{ env.Configuration }}
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1
       with:
