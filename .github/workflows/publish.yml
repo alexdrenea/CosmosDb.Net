@@ -31,4 +31,4 @@ jobs:
       run: dotnet pack src/**/CosmosDB.Net.csproj --configuration ${{ env.Configuration }} -o nupkg -p:PackageVersion=${{ steps.sub.outputs.result }}
     
     - name: push package
-      run: dotnet nuget push "nupkg/*.nupkg" -k ${{ NUGET_KEY }} -s https://api.nuget.org/v3/index.json
+      run: dotnet nuget push src/**/nupkg/*.nupkg -k ${{ secrets.NUGET_KEY }} -s https://api.nuget.org/v3/index.json
