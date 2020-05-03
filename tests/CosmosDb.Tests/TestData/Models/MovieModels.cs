@@ -85,6 +85,38 @@ namespace CosmosDb.Tests.TestData.Models
     }
 
     /// <summary>
+    /// A movie model that does defines conflicting properties - id, PartitionKey.
+    /// This model has to be used with Expression Member helper methods
+    /// </summary>
+    public class MovieNoAttributesWithid
+    {
+        public string id { get; set; }
+        public string PartitionKey { get; set; }
+        public string Title { get; set; }
+        public DateTime ReleaseDate { get; set; }
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public Rating Rating { get; set; }
+        public List<Cast> Cast { get; set; }
+
+        public static MovieNoAttributesWithid GetTestModel(string title)
+        {
+            var rnd = new Random();
+            return new MovieNoAttributesWithid
+            {
+                Title = title,
+                PartitionKey = title,
+                id = $"{rnd.Next(100)}-{title}",
+                ReleaseDate = DateTime.Today,
+                Budget = 1000000,
+                Runtime = 121,
+                Rating = Rating.GetTestRating(title),
+                Cast = new List<Cast>(new[] { Models.Cast.GetTestMovieCast(title) }),
+            };
+        }
+    }
+
+    /// <summary>
     /// A movie model that does not define a label or Id property
     /// When generating a cosmos document or vertex, an Id and a label property will be generated
     /// </summary>
@@ -425,4 +457,53 @@ namespace CosmosDb.Tests.TestData.Models
         }
     }
 
+    /// <summary>
+    /// A more detailed movie model that represents a movie based on the sample data present in the testing suite.
+    /// To be used for performance tests for inserting a lot of documents as streams -> needs to have an id property since we can't do any Attribute based conversions in the stream.
+    /// </summary>
+    public class MovieFullStream
+    {
+        public string id { get; set; }
+        public string PartitionKey { get; set; }
+        public string label { get; set; } = "Movie";
+        public string Title { get; set; }
+        public string Tagline { get; set; }
+        public string Overview { get; set; }
+
+        public DateTime ReleaseDate { get; set; }
+
+        public int Runtime { get; set; }
+        public long Budget { get; set; }
+        public long Revenue { get; set; }
+
+        public string Language { get; set; }
+        public List<string> Genres { get; set; }
+        public List<string> Keywords { get; set; }
+
+        public Rating Rating { get; set; }
+
+        public List<Cast> Cast { get; set; }
+        public MovieFormat Format { get; set; }
+
+        public static MovieFullStream GetMovieFullStream(MovieCsv movieCsv, IEnumerable<CastCsv> cast)
+        {
+            return new MovieFullStream
+            {
+                id = movieCsv.TmdbId,
+                Budget = movieCsv.Budget,
+                Cast = cast?.Select(c => Models.Cast.GetCastFromCsv(c)).ToList() ?? new List<Cast>(),
+                Genres = movieCsv.Genres.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
+                Keywords = movieCsv.Keywords.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries).ToList(),
+                Language = movieCsv.Language,
+                Overview = movieCsv.Overview,
+                Rating = new Rating { SiteName = "TvDB", MaxRating = 5, AvgRating = movieCsv.Rating, Votes = movieCsv.Votes },
+                ReleaseDate = movieCsv.ReleaseDate,
+                Revenue = movieCsv.Revenue,
+                Runtime = movieCsv.Runtime,
+                Tagline = movieCsv.Tagline,
+                Title = movieCsv.Title,
+                PartitionKey = movieCsv.Title
+            };
+        }
+    }
 }

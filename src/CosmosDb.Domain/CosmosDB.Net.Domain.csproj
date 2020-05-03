@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard1.4</TargetFramework>
-    <PackageVersion>0.0.1-local</PackageVersion>
+    <PackageVersion>0.0.6-local</PackageVersion>
     <Authors>Alex Drenea</Authors>
     <Copyright>© 2017-2019 Alex Drenea</Copyright>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>

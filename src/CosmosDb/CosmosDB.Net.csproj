@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <PackageVersion>0.0.2-local-prerelease</PackageVersion>
+    <PackageVersion>0.0.6-local-prerelease</PackageVersion>
     <Authors>Alex Drenea</Authors>
     <Description>
       Wrapper library over the official Microsoft Azure Cosmos DB .NET Client library and the Gremlin.NET driver.

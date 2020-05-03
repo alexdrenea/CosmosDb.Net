@@ -17,6 +17,8 @@ namespace CosmosDB.Net
             };
         }
 
+        public bool AllowBulkExecution { get; set; }
+
         public int? DatabaseThrouhput { get; set; }
 
         public int? ContainerThroughput { get; set; }

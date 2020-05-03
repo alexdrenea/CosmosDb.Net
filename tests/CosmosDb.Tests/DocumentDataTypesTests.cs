@@ -364,5 +364,47 @@ namespace CosmosDb.Tests
             //Test values
             Assert.AreEqual(movie.LabelProp, movieDoc["label"], "label not matching");
         }
+
+
+
+
+        [TestMethod]
+        public void GenerateCosmosDocumentFromModelWithNoNoAttributesButidProperty()
+        {
+            var movie = MovieNoAttributesWithid.GetTestModel("The Network");
+            var movieGraph = CosmosEntitySerializer.Default.ToCosmosDocument(movie, pk => pk.PartitionKey) as IDictionary<string, object>;
+            Assert.IsNotNull(movieGraph, "Failed to convert MovieNoLabelNoId to Document");
+
+            //Test that properties are present in the output document
+            var errors = new List<string>();
+
+            if (!movieGraph.ContainsKey("id")) errors.Add("Document missing Id property");
+            if (!movieGraph.ContainsKey("label")) errors.Add("Document missing Label property");
+            if (!movieGraph.ContainsKey(PartitionKeyPropertyName)) errors.Add("Document missing PartitionKey property");
+            //Since movieId is not maked as Label, it should be present in the output doc
+            if (!movieGraph.ContainsKey("Budget")) errors.Add("Document missing Budget property");
+            if (!movieGraph.ContainsKey("ReleaseDate")) errors.Add("Document missing ReleaseDate property");
+            if (!movieGraph.ContainsKey("Runtime")) errors.Add("Document missing Runtime property");
+            if (!movieGraph.ContainsKey("Rating")) errors.Add("Document missing Rating property");
+            if (!movieGraph.ContainsKey("Cast")) errors.Add("Document missing Cast property");
+            if (!movieGraph.ContainsKey("Title")) errors.Add("Document missing Title property");
+
+            Assert.IsFalse(errors.Any(), string.Join(Environment.NewLine, errors.ToArray()));
+            Assert.AreEqual(9, movieGraph.Keys.Count(), "Document has extra properties");
+
+            //Test values
+            // Assert.AreEqual(movie.Id, movieGraph["id"], "id not matching"); -> id will be a guid
+            Assert.AreEqual(movie.GetType().Name, movieGraph["label"], "label not matching");
+            Assert.AreEqual(movie.PartitionKey, movieGraph[PartitionKeyPropertyName], "partitionKey not matching");
+
+            Assert.AreEqual(movie.id, movieGraph["id"], "MovieId not matching");
+            Assert.AreEqual(movie.Title, movieGraph["Title"], "Title not matching");
+
+            Assert.AreEqual(movie.Rating, movieGraph["Rating"], "Rating not matching");
+            Assert.AreEqual(movie.Cast, movieGraph["Cast"], "Cast not matching");
+            Assert.AreEqual(movie.Budget, movieGraph["Budget"], "Budget not matching");
+            Assert.AreEqual(movie.ReleaseDate, movieGraph["ReleaseDate"], "ReleaseDate not matching");
+            Assert.AreEqual(movie.Runtime, movieGraph["Runtime"], "Runtime not matching");
+        }
     }
 }

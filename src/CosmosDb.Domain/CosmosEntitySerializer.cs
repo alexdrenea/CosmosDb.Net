@@ -28,6 +28,7 @@ namespace CosmosDB.Net.Domain
 
 
         private readonly string _partitionKeyPropertyName = "PartitionKey";
+        private readonly string _idPropertyName = "id";
 
         private IReadOnlyDictionary<BaseProperties, string> _propertyNamesMap;
 
@@ -99,7 +100,7 @@ namespace CosmosDB.Net.Domain
         /// </returns>
         public IDictionary<string, object> ToCosmosDocument<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null)
         {
-            return GetObjectPropValues(entity, pkProperty, idProp, labelProp);
+            return GetObjectPropValuesManual(entity, pkProperty, idProp, labelProp);
         }
 
 
@@ -120,7 +121,7 @@ namespace CosmosDB.Net.Domain
         /// </example>
         public IDictionary<string, object> ToGraphVertex<T>(T data, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null)
         {
-            var vertexProps = GetObjectPropValues(data, pkProperty, idProp, labelProp);
+            var vertexProps = GetObjectPropValuesManual(data, pkProperty, idProp, labelProp);
             return ToGraphVertexInternal(vertexProps);
         }
 
@@ -220,7 +221,9 @@ namespace CosmosDB.Net.Domain
         /// </returns>
         public IDictionary<string, object> ToGraphEdge<T>(T entity, GraphItemBase source, GraphItemBase target, bool single = false)
         {
-            var entityProps = GetObjectPropValues(entity, allowEmptyPartitionKey: true, defaultId: single ? $"{source.Id}-{target.Id}" : null);
+            var entityProps = GetObjectPropValues(entity, throwOnEmptyPartitionKey: false, generateIdIfEmpty: !single);
+            if (single && string.IsNullOrEmpty(entityProps[_propertyNamesMap[BaseProperties.Id]].ToString()))
+                entityProps[_propertyNamesMap[BaseProperties.Id]] = $"{source.Id}-{target.Id}";
 
             var res = new Dictionary<string, object>();
             res[_propertyNamesMap[BaseProperties.Id]] = entityProps[_propertyNamesMap[BaseProperties.Id]].ToString();
@@ -361,11 +364,14 @@ namespace CosmosDB.Net.Domain
         /// If left null, and an ID property is not found on the object, will generate a GUID for id.
         /// If a label attribute is not present, a label property will be generated and its value will be the class name.
         /// </param>
-        private IDictionary<string, object> GetObjectPropValues<T>(T entity, bool expandAllProps = true, bool allowEmptyPartitionKey = false, string defaultId = null)
+        private IDictionary<string, object> GetObjectPropValues<T>(
+            T entity, 
+            bool expandAllProps = true, 
+            bool throwOnEmptyPartitionKey = true, 
+            bool generateIdIfEmpty = true)
         {
-            var res = new Dictionary<string, object>();
-            var dataType = entity.GetType();
-            var allProps = dataType.GetRuntimeProperties();
+            var allProps = entity.GetType().GetRuntimeProperties()
+                                           .Where(p => !p.CustomAttributes.Any(a => _ignoredPropertyAttributes.Contains(a.AttributeType.Name))).ToArray();
 
             var pkProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "PartitionKeyAttribute"));
             var labelProp = allProps.Where(p => p.CustomAttributes.Any(a => a.AttributeType.Name == "LabelAttribute"));
@@ -378,43 +384,78 @@ namespace CosmosDB.Net.Domain
             if (idProp.Count() > 1)
                 throw new Exception("More than 1 Id property defined.");
 
-            res[_propertyNamesMap[BaseProperties.Label]] = labelProp.FirstOrDefault()?.GetValue(entity, null)?.ToString() ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
-            res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(idProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? defaultId ?? Guid.NewGuid().ToString();
-            res[_propertyNamesMap[BaseProperties.PartitionKey]] = SanitizeValue(pkProp.FirstOrDefault()?.GetValue(entity, null)?.ToString()) ?? (allowEmptyPartitionKey ? "" : throw new Exception("PartitionKey property must have a non-empty value"));
-
-            if (expandAllProps)
-            {
-                var props = allProps.Where(p => !p.CustomAttributes.Any(a => _ignoredPropertyAttributes.Contains(a.AttributeType.Name)))
-                                    .Where(p => !_ignoredPropertyNames.Contains(p.Name.ToLower()))
-                                    .Select(p => new KeyValuePair<string, object>(p.Name, p.GetValue(entity) ?? ""));
-                foreach (var p in props)
-                    res.Add(p.Key, p.Value);
-            }
-
-            return res;
+            return GetObjectPropValuesInternal(
+                   entity,
+                   allProps,
+                   pkProp.FirstOrDefault(),
+                   idProp.FirstOrDefault(),
+                   labelProp.FirstOrDefault(),
+                   expandAllProps,
+                   throwOnEmptyPartitionKey,
+                   generateIdIfEmpty
+            );
         }
 
-        private IDictionary<string, object> GetObjectPropValues<T>(T entity, Expression<Func<T, object>> pkProperty, Expression<Func<T, object>> idProp = null, Expression<Func<T, object>> labelProp = null, bool expandAllProps = true)
+
+        private IDictionary<string, object> GetObjectPropValuesManual<T>(
+            T entity, 
+            Expression<Func<T, object>> pkProperty = null, 
+            Expression<Func<T, object>> idProp = null, 
+            Expression<Func<T, object>> labelProp = null, 
+            bool expandAllProps = true)
+        {
+            var dataType = entity.GetType();
+            var propertyDefinitions = dataType.GetRuntimeProperties()
+                                       .Where(p => !p.CustomAttributes.Any(a => _ignoredPropertyAttributes.Contains(a.AttributeType.Name))).ToArray();
+
+            return GetObjectPropValuesInternal(
+                    entity,
+                    propertyDefinitions,
+                    propertyDefinitions.FirstOrDefault(f => f.Name == pkProperty.GetName()),
+                    propertyDefinitions.FirstOrDefault(f => f.Name == idProp.GetName()),
+                    propertyDefinitions.FirstOrDefault(f => f.Name == labelProp.GetName()),
+                    expandAllProps
+            );
+        }
+
+        private IDictionary<string, object> GetObjectPropValuesInternal<T>(
+            T entity,
+            IEnumerable<PropertyInfo> allProperties,
+            PropertyInfo pkPropertyInfo = null,
+            PropertyInfo idPropertyInfo = null,
+            PropertyInfo labelPropertyInfo = null,
+            bool expandAllProps = true,
+            bool throwOnEmptyPartitionKey = true,
+            bool generateIdIfEmpty = true)
         {
             var res = new Dictionary<string, object>();
             var dataType = entity.GetType();
+            if (!(allProperties?.Any() == true))
+                allProperties = dataType.GetRuntimeProperties().Where(p => !p.CustomAttributes.Any(a => _ignoredPropertyAttributes.Contains(a.AttributeType.Name)));
 
-            if (pkProperty == null)
-                throw new Exception("PartitionKey property defined must be defined.");
+            if (pkPropertyInfo == null) pkPropertyInfo = allProperties.FirstOrDefault(f => f.Name == _partitionKeyPropertyName);
+            if (idPropertyInfo == null) idPropertyInfo = allProperties.FirstOrDefault(f => f.Name == _idPropertyName);
 
-            res[_propertyNamesMap[BaseProperties.Label]] = dataType.GetRuntimeProperty(labelProp.GetName() ?? "")?.GetValue(entity, null)?.ToString() ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value ?? dataType.Name;
-            res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(dataType.GetRuntimeProperty(idProp.GetName() ?? "")?.GetValue(entity, null)?.ToString()) ?? Guid.NewGuid().ToString();
-            res[_propertyNamesMap[BaseProperties.PartitionKey]] = SanitizeValue(dataType.GetRuntimeProperty(pkProperty.GetName()).GetValue(entity, null)?.ToString()) ?? throw new Exception("PartitionKey property must have a non-empty value");
+            res[_propertyNamesMap[BaseProperties.PartitionKey]] =
+                       SanitizeValue(pkPropertyInfo?.GetValue(entity)?.ToString())
+                    ?? (throwOnEmptyPartitionKey ? throw new Exception("PartitionKey property must have a non-empty value") : string.Empty);
+
+            res[_propertyNamesMap[BaseProperties.Id]] = SanitizeValue(idPropertyInfo?.GetValue(entity)?.ToString())
+                    ?? (generateIdIfEmpty ? Guid.NewGuid().ToString() : string.Empty);
+            
+            res[_propertyNamesMap[BaseProperties.Label]] = 
+                        labelPropertyInfo?.GetValue(entity, null)?.ToString() 
+                    ?? dataType.GetTypeInfo().GetCustomAttribute<LabelAttribute>()?.Value 
+                    ?? dataType.Name;
 
             if (expandAllProps)
             {
-                var props = dataType.GetRuntimeProperties()
-                                        .Where(p => !p.CustomAttributes.Any(a => _ignoredPropertyAttributes.Contains(a.AttributeType.Name)))
-                                        .Select(p => new KeyValuePair<string, object>(p.Name, p.GetValue(entity) ?? ""));
-                foreach (var p in props)
-                    res.Add(p.Key, p.Value);
-
+                var properties = allProperties.Where(p => !_ignoredPropertyNames.Contains(p.Name.ToLower()))
+                                              .Select(p => new KeyValuePair<string, object>(p.Name, p.GetValue(entity) ?? ""));
+                foreach (var p in properties)
+                    if (!res.ContainsKey(p.Key)) res.Add(p.Key, p.Value);
             }
+
             return res;
         }
 

@@ -6,6 +6,12 @@ using System.Collections.Concurrent;
 using System.Threading;
 using CosmosDB.Net.Domain;
 using Microsoft.Azure.Cosmos;
+using System.IO;
+using Newtonsoft.Json;
+using System.Collections;
+using System.Reflection;
+using System.Linq;
+using System.Linq.Expressions;
 
 namespace CosmosDB.Net
 {
@@ -66,6 +72,7 @@ namespace CosmosDB.Net
             {
                 ConnectionMode = ConnectionMode.Direct,
                 RequestTimeout = new TimeSpan(1, 0, 0),
+                AllowBulkExecution = createOptions?.AllowBulkExecution ?? false,
             };
             return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, containerId, createOptions);
         }
@@ -89,6 +96,7 @@ namespace CosmosDB.Net
             {
                 ConnectionMode = ConnectionMode.Direct,
                 RequestTimeout = new TimeSpan(1, 0, 0),
+                AllowBulkExecution = createOptions?.AllowBulkExecution ?? false,
             };
             return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, cco), databaseId, containerId, createOptions);
         }
@@ -135,13 +143,37 @@ namespace CosmosDB.Net
 
 
         /// <summary>
-        /// Insert a document into the database.
+        /// Insert a document into the database. 
+        /// The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+        /// If the type is decorated with attributes (<see cref="CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+        /// then the values of those properties will be used.
+        /// If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+        /// If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+        /// If there are still no values at this point the following defaults will be used:
+        ///  id -> new guid
+        ///  label -> name fo type
+        ///  partitionkey -> throw an exception.
         /// </summary>
         /// <param name="document">Entity to insert</param>
+        /// <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+        /// <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+        /// <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+        /// <remarks>The method will fail if a value cannot be found for partition key</remarks>
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
-        public Task<CosmosResponse> InsertDocument<T>(T document)
+        public Task<CosmosResponse> InsertDocument<T>(T document, Expression<Func<T, object>> pkProperty = null, Expression<Func<T, object>> idProperty = null, Expression<Func<T, object>> labelProperty = null)
         {
-            return InsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document));
+            return InsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document, pkProperty, idProperty, labelProperty));
+        }
+
+        /// <summary>
+        /// Insert a document stream into the database.
+        /// </summary>
+        /// <param name="stream">Stream to insert</param>
+        /// <param name="partitionKey">PartitionKey to send</param>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        public Task<CosmosResponse> InsertDocument(Stream stream, PartitionKey partitionKey)
+        {
+            return InsertDocumentStreamInternal(stream, partitionKey);
         }
 
         /// <summary>
@@ -160,17 +192,63 @@ namespace CosmosDB.Net
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
         public Task<IEnumerable<CosmosResponse>> InsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return ProcessMultipleDocuments(documents, InsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
+            return ProcessMultipleDocuments(documents, (d) => InsertDocument(d), reportingCallback, reportingInterval, threads, cancellationToken);
         }
 
         /// <summary>
-        /// Upsert (Insert or Create) a document into the database.
+        /// Insert multiple documents into the database using a TPL Dataflow block.
+        /// The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+        /// Each document passed in must contain a property that matches the partitionKey property assigned on the collection
         /// </summary>
-        /// <param name="document">Entity to update</param>
-        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
-        public Task<CosmosResponse> UpsertDocument<T>(T document)
+        /// <param name="documents">Documents to insert</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        public Task<IEnumerable<CosmosResponse>> InsertDocuments(IEnumerable<(Stream stream, PartitionKey pk)> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return UpsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document));
+            return ProcessMultipleStreamDocuments(documents, InsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
+        }
+
+
+        /// <summary>
+        /// Upsert (Insert or Create) a document into the database.
+        /// The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+        /// If the type is decorated with attributes (<see cref="CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+        /// then the values of those properties will be used.
+        /// If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+        /// If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+        /// If there are still no values at this point the following defaults will be used:
+        ///  id -> new guid
+        ///  label -> name fo type
+        ///  partitionkey -> throw an exception.
+        /// </summary>
+        /// <param name="document">Entity to upsert</param>
+        /// <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+        /// <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+        /// <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+        /// <remarks>The method will fail if a value cannot be found for partition key</remarks>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        public Task<CosmosResponse> UpsertDocument<T>(T document, Expression<Func<T, object>> pkProperty = null, Expression<Func<T, object>> idProperty = null, Expression<Func<T, object>> labelProperty = null)
+        {
+            return UpsertDocumentInternal(CosmosSerializer.ToCosmosDocument(document, pkProperty, idProperty, labelProperty));
+        }
+
+        /// <summary>
+        /// Upsert (Insert or Create) a document stream into the database.
+        /// </summary>
+        /// <param name="stream">Stream to insert</param>
+        /// <param name="partitionKey">PartitionKey to send</param>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        public Task<CosmosResponse> UpsertDocument(Stream stream, PartitionKey partitionKey)
+        {
+            return UpsertDocumentStreamInternal(stream, partitionKey);
         }
 
         /// <summary>
@@ -189,8 +267,30 @@ namespace CosmosDB.Net
         /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
         public Task<IEnumerable<CosmosResponse>> UpsertDocuments<T>(IEnumerable<T> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return ProcessMultipleDocuments(documents, UpsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
+            return ProcessMultipleDocuments(documents, (d) => UpsertDocument(d), reportingCallback, reportingInterval, threads, cancellationToken);
         }
+
+        /// <summary>
+        /// Upsert (Insert or Update) multiple document streams into the database using a TPL Dataflow block.
+        /// The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+        /// each document passed in must contain a property that matches the partitionKey property assigned on the collection
+        /// </summary>
+        /// <param name="documents">Documents to upsert</param>
+        /// <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+        /// <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+        /// <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+        /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
+        /// <example>
+        /// <![CDATA[
+        /// await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
+        /// ]]>
+        /// </example>
+        /// <returns><see cref="CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        public Task<IEnumerable<CosmosResponse>> UpsertDocuments(IEnumerable<(Stream stream, PartitionKey pk)> documents, Action<IEnumerable<CosmosResponse>> reportingCallback = null, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return ProcessMultipleStreamDocuments(documents, UpsertDocument, reportingCallback, reportingInterval, threads, cancellationToken);
+        }
+
 
 
         /// <summary>
@@ -314,12 +414,24 @@ namespace CosmosDB.Net
             return AddDocumentInternal(() => Container.CreateItemAsync(document, new PartitionKey(document[_partitionKeyPropertyName].ToString())));
         }
 
+        internal Task<CosmosResponse> InsertDocumentStreamInternal(Stream stream, PartitionKey partitionKey)
+        {
+            return AddDocumentStreamInternal(() => Container.CreateItemStreamAsync(stream, partitionKey));
+        }
+
+
         internal Task<CosmosResponse> UpsertDocumentInternal(IDictionary<string, object> document)
         {
             if (!document.ContainsKey(_partitionKeyPropertyName))
                 throw new InvalidOperationException($"Document does not have a partition key property. Expecting '{_partitionKeyPropertyName}'");
             return AddDocumentInternal(() => Container.UpsertItemAsync(document, new PartitionKey(document[_partitionKeyPropertyName].ToString())));
         }
+
+        internal Task<CosmosResponse> UpsertDocumentStreamInternal(Stream stream, PartitionKey partitionKey)
+        {
+            return AddDocumentStreamInternal(() => Container.UpsertItemStreamAsync(stream, partitionKey));
+        }
+
 
         internal async Task<CosmosResponse> AddDocumentInternal(Func<Task<ItemResponse<IDictionary<string, object>>>> addFunc)
         {
@@ -340,6 +452,36 @@ namespace CosmosDB.Net
                 return new CosmosResponse { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
             }
         }
+
+        internal async Task<CosmosResponse> AddDocumentStreamInternal(Func<Task<ResponseMessage>> addFunc)
+        {
+            try
+            {
+                var start = DateTime.Now;
+
+                var res = await addFunc.Invoke();
+
+                return new CosmosResponse
+                {
+                    ExecutionTime = DateTime.Now.Subtract(start),
+                    StatusCode = res.StatusCode,
+
+                    RequestCharge = res.Headers.RequestCharge,
+
+                    ActivityId = res.Headers.ActivityId,
+                    ETag = res.Headers.ETag
+                };
+            }
+            catch (CosmosException cex)
+            {
+                return cex.ToCosmosResponse();
+            }
+            catch (Exception e)
+            {
+                return new CosmosResponse { Error = e, StatusCode = System.Net.HttpStatusCode.InternalServerError };
+            }
+        }
+
 
         internal async Task<IEnumerable<CosmosResponse>> ProcessMultipleDocuments<T>(IEnumerable<T> documents, Func<T, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -371,6 +513,38 @@ namespace CosmosDB.Net
             reportingCallback?.Invoke(cb.ToArray());
             return cb.ToArray();
         }
+
+        internal async Task<IEnumerable<CosmosResponse>> ProcessMultipleStreamDocuments(IEnumerable<(Stream stream, PartitionKey pk)> documents, Func<Stream, PartitionKey, Task<CosmosResponse>> execute, Action<IEnumerable<CosmosResponse>> reportingCallback, TimeSpan? reportingInterval = null, int threads = 4, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!reportingInterval.HasValue) reportingInterval = TimeSpan.FromSeconds(10);
+            ConcurrentBag<CosmosResponse> cb = new ConcurrentBag<CosmosResponse>();
+            Timer statsTimer = null;
+            if (reportingCallback != null)
+            {
+                statsTimer = new Timer(_ =>
+                {
+                    reportingCallback?.Invoke(cb.ToArray());
+                }, null, (int)reportingInterval.Value.TotalMilliseconds, (int)reportingInterval.Value.TotalMilliseconds);
+            }
+
+            var actionBlock = new ActionBlock<(Stream stream, PartitionKey pk)>(async (t) =>
+            {
+                var res = await execute(t.stream, t.pk);
+                cb.Add(res);
+            }, new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = threads, CancellationToken = cancellationToken });
+
+            foreach (var i in documents)
+            {
+                actionBlock.Post(i);
+            }
+            actionBlock.Complete();
+            await actionBlock.Completion;
+
+            statsTimer?.Dispose();
+            reportingCallback?.Invoke(cb.ToArray());
+            return cb.ToArray();
+        }
+
 
         #endregion
     }
