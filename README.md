@@ -3,7 +3,7 @@
 # CosmosDB.Net
 CosmosDB.Net is a library that helps development against an Azure Cosmos DB database - SQL or Graph. It is a wrapper over the latest stable official [Azure Cosmos DB .NET SDK Version 3.0](https://github.com/Azure/azure-cosmos-dotnet-v3) as well as the [Gremlin.NET](https://github.com/apache/tinkerpop/tree/master/gremlin-dotnet) driver. 
 
-Install using nuget: `nuget install Gremlin.Net`
+Install using nuget: `nuget install CosmosDB.Net`
 
 ### CosmosClientSql
 The `CosmosClientSql` class is a wrapper over Cosmos Client that enables calls via the SQL API. The wrapper exposes the underlaying Cosmos SDK objects so a caller can access the full functionality of the SDK.
