@@ -33,6 +33,25 @@ There are also options for the initializer to automatically create the database 
 					});
 ```
 
+You can further customize the CosmosClient by providing your own `CosmosClientOptions` instance in the `CreateOptions` object
+
+```csharp
+ //Initialize a CosmosClientSql.
+ var sqlClient = await CosmosClientSql.GetByConnectionString(
+					connectionString, 
+					databaseId, 
+					containerId, 
+					new CreateOptions(databaseId, databaseId, "/pk") 
+					{ 
+						DatabaseThrouhput = 1000
+						ClientOptions = new CosmosClientOptions
+						{
+							ConnectionMode = ConnectionMode.Gateway,
+							AllowBulkExecution = true,
+						};
+					});
+```
+
 ### CosmosClientGraph
 
 The `CosmosClientGraph` class is a higher lever wrapper that encapsulates the `CosmosClientSql` client as well as a `GremlinServer` instance from Gremlin.NET. The built-in `CosmosEntitySerializer` offers seamless transformations to and from the internal Cosmos DB Graphson format that is used to create a "Vertex" or an "Edge".

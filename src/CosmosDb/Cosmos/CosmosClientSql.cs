@@ -68,13 +68,7 @@ namespace CosmosDB.Net
         /// <returns>Reference to a Sql CosmosClient</returns>
         public static Task<ICosmosClientSql> GetByConnectionString(string connectionString, string databaseId, string containerId, CreateOptions createOptions = null)
         {
-            var cco = new CosmosClientOptions()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                RequestTimeout = new TimeSpan(1, 0, 0),
-                AllowBulkExecution = createOptions?.AllowBulkExecution ?? false,
-            };
-            return GetCosmosDbClientInternal(new CosmosClient(connectionString, cco), databaseId, containerId, createOptions);
+            return GetCosmosDbClientInternal(new CosmosClient(connectionString, createOptions?.ClientOptions ?? CreateOptions.DefaultClientOptions), databaseId, containerId, createOptions);
         }
 
         /// <summary>
@@ -92,13 +86,7 @@ namespace CosmosDB.Net
         /// <returns>Reference to a Sql CosmosClient</returns>
         public static Task<ICosmosClientSql> GetByAccountEndpoint(string accountEndpoint, string key, string databaseId, string containerId, CreateOptions createOptions = null)
         {
-            var cco = new CosmosClientOptions()
-            {
-                ConnectionMode = ConnectionMode.Direct,
-                RequestTimeout = new TimeSpan(1, 0, 0),
-                AllowBulkExecution = createOptions?.AllowBulkExecution ?? false,
-            };
-            return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, cco), databaseId, containerId, createOptions);
+            return GetCosmosDbClientInternal(new CosmosClient(accountEndpoint, key, createOptions?.ClientOptions ?? CreateOptions.DefaultClientOptions), databaseId, containerId, createOptions);
         }
 
 

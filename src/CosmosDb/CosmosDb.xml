@@ -1,0 +1,866 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CosmosDB.Net</name>
+    </assembly>
+    <members>
+        <member name="T:CosmosDB.Net.CosmosClientGraph">
+            <summary>
+            Wrapper class around the Azure.Comsos.CosmosClient class as well as the Gremlin.NET driver to be used when connecting to a CosmosDB Graph Database
+            Exposes all upstream SDK objects: <see cref="T:Microsoft.Azure.Cosmos.CosmosClient"/>, <see cref="P:CosmosDB.Net.CosmosClientGraph.Database"/> for direct access to base functionality 
+            Exposes methods for both Gremlin and SQL operations to be executed against the connection.
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.GetClientWithSql(System.String,System.String,System.String,System.String,CosmosDB.Net.CreateOptions)">
+            <summary>
+            Initialize a SQL backed Cosmos Graph Client.
+            If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+            If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+            If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
+            </summary>
+            <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
+            <param name="key">Account Key from the Key blade in the portal</param>
+            <param name="databaseId">Id of the Database to connect to.</param>
+            <param name="containerId">Id of the Container to connect to.</param>
+            <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+            <exception cref="T:System.Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
+            <returns>Reference to a Graph CosmosClient</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.GetClient(System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            Initialize a Cosmos Graph Client that is purely backed by Gremlin.NET and has no Cosmos component.
+            Some operatios will not be allowed on a client obtained from this helper.
+            </summary>
+            <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
+            <param name="key">Account Key from the Key blade in the portal</param>
+            <param name="databaseId">Name of the Database to connect to.</param>
+            <param name="containerId">Name of the Container to connect to.</param>
+            <param name="partitionKeyPath">ParitionKey path for the container. Current implemetation only supports simple paths. Used in the deserialization process.</param>
+            <returns>Reference to a Graph CosmosClient</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.GetGremlinClient">
+            <summary>
+            Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.ExecuteGremlinSingle``1(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Executes a Gremlin traversal and returns a singe result back.
+            If the traversal returns more than 1 result, this method will return the first result only.
+            When the type of the result is unknown (using steps like tree() or path(), send T as JObject and manually deserialize.
+            </summary>
+            <typeparam name="T">Type to convert the results to</typeparam>
+            <param name="queryString">Gremlin traversal</param>
+            <param name="bindings">[Optional] Collection of parameters and their values to be sent to the gremlin server along with the query.</param>
+            <example>
+            <![CDATA[
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language', 'en').has('Budget', gt(1000000))");
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language',lang).has('Budget',gt(budget))", new Dictionary<string, object> { { "lang", "en" }, { "budget", 1000000 } });
+            ]]>
+            </example>
+            <returns>CosmosResponse wrapped Array of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.ExecuteGremlin``1(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Executes a Gremlin traversal. 
+            When the type of the result is unknown (using steps like tree() or path(), send T as JObject and manually deserialize
+            </summary>
+            <typeparam name="T">Type to convert the results to</typeparam>
+            <param name="queryString">Gremlin traversal</param>
+            <param name="bindings">[Optional] Collection of parameters and their values to be sent to the gremlin server along with the query.</param>
+            <example>
+            <![CDATA[
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language', 'en').has('Budget', gt(1000000))");
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language',lang).has('Budget',gt(budget))", new Dictionary<string, object> { { "lang", "en" }, { "budget", 1000000 } });
+            ]]>
+            </example>
+            <returns>CosmosResponse wrapped Array of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.InsertVertex``1(``0)">
+            <summary>
+            Insert a vertex into the database.
+            This call uses the SQL API to insert the vertex as a document.
+            </summary>
+            <param name="entity">Entity to insert</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.InsertVertex``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple vertices into the database using a TPL Dataflow block.
+            This call uses the SQL API to insert the vertices as documents.
+            </summary>
+            <param name="entities">Entites to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.InsertVertex(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.UpsertVertex``1(``0)">
+            <summary>
+            Upsert (Insert or Update) a vertex into the database.
+            This call uses the SQL API to upsert the vertex as a document.
+            </summary>
+            <param name="entity">Entity to upsert</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.UpsertVertex``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple vertices into the database using a TPL Dataflow block.
+            This call uses the SQL API to upsert the vertex]ices as a document.
+            </summary>
+            <param name="entities">Entites to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.InsertEdge``3(``0,``1,``2,System.Boolean)">
+            <summary>
+            Insert an edge into the database by providing the Edge domain model and references to its source and target as domain models
+            This call uses the SQL API to insert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to insert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <remarks>Inserting the same edge twice with single:false will succeed and generate a new edge instance, while with single:true it will fail.</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.UpsertEdge``3(``0,``1,``2,System.Boolean)">
+            <summary>
+            Upsert an edge into the database by providing the Edge domain model and references to its source and target as domain models
+            This call uses the SQL API to upsert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to upsert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.InsertEdge``1(``0,CosmosDB.Net.Domain.GraphItemBase,CosmosDB.Net.Domain.GraphItemBase,System.Boolean)">
+            <summary>
+            Insert an edge into the database by referencing the source and target vertices just by their base properties (id, partitionKey, label).
+            This call uses the SQL API to insert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to insert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <remarks>Inserting the same edge twice with single:false will succeed and generate a new edge instance, while with single:true it will fail.</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.UpsertEdge``1(``0,CosmosDB.Net.Domain.GraphItemBase,CosmosDB.Net.Domain.GraphItemBase,System.Boolean)">
+            <summary>
+            Upsert an edge into the database by referencing the source and target vertices just by their base properties (id, partitionKey, label).
+            This call uses the SQL API to upsert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to upsert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.InsertEdges(System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.EdgeDefinition},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple edges into the database using a TPL Dataflow block.
+            This call uses the SQL API to insert the edges as a document.
+            </summary>
+            <param name="edges">Edges to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.UpsertEdges(System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.EdgeDefinition},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple edges into the database using a TPL Dataflow block.
+            This call uses the SQL API to upsert the edges as a document.
+            </summary>
+            <param name="edges">Edges to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.ReadVertex``1(System.String,System.String)">
+            <summary>
+            Read a graph vertex using the SQL API. 
+            Forward the request to the SQL Client with a JObject type and then convert the resulting graphson document into our entity using the serialization helper.
+            </summary>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that encapsulates the result of the query and tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.ReadVertices``1(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Gets all documents of the given type from the collection.
+            </summary>
+            <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+            <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.ExecuteSQL``1(System.String,System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Execute a SQL statement against the graph database.
+            Forward the request to the SQL Client with a JObject type and then convert the resulting graphson documents into our entity using the serialization helper.
+            </summary>
+            <param name="query">Query to execute</param>
+            <param name="pagedResults">true to return only one page of the result set, false(Default) to return all results. </param>
+            <param name="continuationToken">token to pass into the query iterator to resume from a specific page. Should be present when using pageResults = true</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that encapsulates the result of the query and tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.Dispose">
+            <summary>
+            Dispose of cosmos client
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientGraph.Dispose(System.Boolean)">
+            <summary>
+            Dispose of cosmos client
+            </summary>
+            <param name="disposing">True if disposing</param>
+        </member>
+        <member name="T:CosmosDB.Net.CosmosClientSql">
+            <summary>
+            Wrapper class around the Azure.Comsos.Container class to be used when connecting to a CosmosDB SQL database
+            Exposes all upstream SDK objects: <see cref="T:Microsoft.Azure.Cosmos.CosmosClient"/>, <see cref="P:CosmosDB.Net.CosmosClientSql.Database"/> for direct access to base functionality 
+            Exposes wrapper methods for easy item management, support for Model attributes, fast bulk inserts
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.GetByAccountName(System.String,System.String,System.String,System.String,CosmosDB.Net.CreateOptions)">
+            <summary>
+            Initialize a CosmosClient by providing the accountName and key.
+            If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+            If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+            If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
+            </summary>
+            <param name="accountName">Name of the Cosmos account to connect to. (i.e [yourAccount] from -> https://yourAccount.documents.azure.com:443/)</param>
+            <param name="key">Account Key from the Key blade in the portal</param>
+            <param name="databaseId">Id of the Database to connect to.</param>
+            <param name="containerId">Id of the Container to connect to.</param>
+            <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+            <exception cref="T:System.Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
+            <returns>Reference to a Sql CosmosClient</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.GetByConnectionString(System.String,System.String,System.String,CosmosDB.Net.CreateOptions)">
+            <summary>
+            Initialize a CosmosClient by providing the accountName and key.
+            If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+            If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+            If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
+            </summary>
+            <param name="connectionString">Connection String to a CosmosDB. (i.e. AccountEndpoint=***;AccountKey=***;)</param>
+            <param name="databaseId">Id of the Database to connect to.</param>
+            <param name="containerId">Id of the Container to connect to.</param>
+            <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+            <exception cref="T:System.Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
+            <returns>Reference to a Sql CosmosClient</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.GetByAccountEndpoint(System.String,System.String,System.String,System.String,CosmosDB.Net.CreateOptions)">
+            <summary>
+            Initialize a CosmosClient by providing the accountName and key.
+            If database or container do not exist under the account, the <paramref name="createOptions"/> must be provided and include required parameters to create the database and container.
+            If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.
+            If database and container exist under the account, <paramref name="createOptions"/> will be ignored if passed in.
+            </summary>
+            <param name="accountEndpoint">Endpoint of the Cosmos account to connect to. (i.e https://youraccount.documents.azure.com:443/) </param>
+            <param name="key">Account Key from the Key blade in the portal</param>
+            <param name="databaseId">Id of the Database to connect to.</param>
+            <param name="containerId">Id of the Container to connect to.</param>
+            <param name="createOptions">Speficies the options for creating a new database and contianer if need be (throughput, partitionKey, indexing strategy, TTL etc..)</param>
+            <exception cref="T:System.Exception">If database or container do not exist under the account, and a <paramref name="createOptions"/> is not provided, the method will throw an exception.</exception>
+            <returns>Reference to a Sql CosmosClient</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.InsertDocument``1(``0,System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}})">
+            <summary>
+            Insert a document into the database. 
+            The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+            If the type is decorated with attributes (<see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="T:CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+            then the values of those properties will be used.
+            If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+            If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+            If there are still no values at this point the following defaults will be used:
+             id -> new guid
+             label -> name fo type
+             partitionkey -> throw an exception.
+            </summary>
+            <param name="document">Entity to insert</param>
+            <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+            <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+            <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+            <remarks>The method will fail if a value cannot be found for partition key</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.InsertDocument(System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey)">
+            <summary>
+            Insert a document stream into the database.
+            </summary>
+            <param name="stream">Stream to insert</param>
+            <param name="partitionKey">PartitionKey to send</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.InsertDocuments``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple documents into the database using a TPL Dataflow block.
+            </summary>
+            <param name="documents">Documents to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.InsertDocuments(System.Collections.Generic.IEnumerable{System.ValueTuple{System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey}},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple documents into the database using a TPL Dataflow block.
+            The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+            Each document passed in must contain a property that matches the partitionKey property assigned on the collection
+            </summary>
+            <param name="documents">Documents to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.UpsertDocument``1(``0,System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}})">
+            <summary>
+            Upsert (Insert or Create) a document into the database.
+            The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+            If the type is decorated with attributes (<see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="T:CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+            then the values of those properties will be used.
+            If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+            If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+            If there are still no values at this point the following defaults will be used:
+             id -> new guid
+             label -> name fo type
+             partitionkey -> throw an exception.
+            </summary>
+            <param name="document">Entity to upsert</param>
+            <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+            <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+            <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+            <remarks>The method will fail if a value cannot be found for partition key</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.UpsertDocument(System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey)">
+            <summary>
+            Upsert (Insert or Create) a document stream into the database.
+            </summary>
+            <param name="stream">Stream to insert</param>
+            <param name="partitionKey">PartitionKey to send</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.UpsertDocuments``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple documents into the database using a TPL Dataflow block.
+            </summary>
+            <param name="documents">Documents to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.UpsertDocuments(System.Collections.Generic.IEnumerable{System.ValueTuple{System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey}},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple document streams into the database using a TPL Dataflow block.
+            The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+            each document passed in must contain a property that matches the partitionKey property assigned on the collection
+            </summary>
+            <param name="documents">Documents to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.ReadDocument``1(System.String,System.String)">
+            <summary>
+            Read a document by its Id and Partition Key. 
+            This is the fastest operation possible in a CosmosDB collection.
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.ReadDocuments``1(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Gets all documents of the given type from the collection.
+            </summary>
+            <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+            <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.ExecuteSQL``1(System.String,System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Executes a SQL Query against the collection
+            </summary>
+            <param name="query">Query to execute</param>
+            <param name="pagedResults">true to return only one page of the result set, false(Default) to return all results. </param>
+            <param name="continuationToken">token to pass into the query iterator to resume from a specific page. Should be present when using pageResults = true</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.Dispose">
+            <summary>
+            Dispose of cosmos client
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.CosmosClientSql.Dispose(System.Boolean)">
+            <summary>
+            Dispose of cosmos client
+            </summary>
+            <param name="disposing">True if disposing</param>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.GetGremlinClient">
+            <summary>
+            Gets a new intance of a GremlinClient so callers can execute query directly without going though the wrapper methods.
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.ExecuteGremlinSingle``1(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Executes a Gremlin traversal and returns a singe result back.
+            If the traversal returns more than 1 result, this method will return the first result only.
+            When the type of the result is unknown (using steps like tree() or path(), send T as JObject and manually deserialize.
+            </summary>
+            <typeparam name="T">Type to convert the results to</typeparam>
+            <param name="queryString">Gremlin traversal</param>
+            <param name="bindings">[Optional] Collection of parameters and their values to be sent to the gremlin server along with the query.</param>
+            <example>
+            <![CDATA[
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language', 'en').has('Budget', gt(1000000))");
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language',lang).has('Budget',gt(budget))", new Dictionary<string, object> { { "lang", "en" }, { "budget", 1000000 } });
+            ]]>
+            </example>
+            <returns>CosmosResponse wrapped Array of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.ExecuteGremlin``1(System.String,System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Executes a Gremlin traversal. 
+            When the type of the result is unknown (using steps like tree() or path(), send T as JObject and manually deserialize
+            </summary>
+            <typeparam name="T">Type to convert the results to</typeparam>
+            <param name="queryString">Gremlin traversal</param>
+            <param name="bindings">[Optional] Collection of parameters and their values to be sent to the gremlin server along with the query.</param>
+            <example>
+            <![CDATA[
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language', 'en').has('Budget', gt(1000000))");
+            await cosmosGraphClient.ExecuteGremlin<Movie>("g.V().hasLabel('Movie').has('Language',lang).has('Budget',gt(budget))", new Dictionary<string, object> { { "lang", "en" }, { "budget", 1000000 } });
+            ]]>
+            </example>
+            <returns>CosmosResponse wrapped Array of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.InsertVertex``1(``0)">
+            <summary>
+            Insert a vertex into the database.
+            This call uses the SQL API to insert the vertex as a document.
+            </summary>
+            <param name="entity">Entity to insert</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.InsertVertex``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple vertices into the database using a TPL Dataflow block.
+            This call uses the SQL API to insert the vertices as documents.
+            </summary>
+            <param name="entities">Entites to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.InsertVertex(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.UpsertVertex``1(``0)">
+            <summary>
+            Upsert (Create or Update) a vertex into the database.
+            This call uses the SQL API to upsert the vertex as a document.
+            </summary>
+            <param name="entity">Entity to upsert</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/></exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.UpsertVertex``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple vertices into the database using a TPL Dataflow block.
+            This call uses the SQL API to upsert the vertices as documents.
+            </summary>
+            <param name="entities">Entites to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.InsertEdge``3(``0,``1,``2,System.Boolean)">
+            <summary>
+            Insert an edge into the database by providing the Edge domain model and references to its source and target as domain models
+            This call uses the SQL API to insert the edge as a document.
+            WARNING: If Source or Target vertex do not define an ID property (gets a GUID automatically) DO NOT use single: true
+            because when trying to generate the edge ID, you will get a new ID for the source or target vertex.
+            </summary>
+            <param name="edge">Edge entity to insert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <remarks>Inserting the same edge twice with single:false will succeed and generate a new edge instance, while with single:true it will fail.</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.UpsertEdge``3(``0,``1,``2,System.Boolean)">
+            <summary>
+            Upsert an edge into the database by providing the Edge domain model and references to its source and target as domain models
+            This call uses the SQL API to upsert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to upsert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.InsertEdge``1(``0,CosmosDB.Net.Domain.GraphItemBase,CosmosDB.Net.Domain.GraphItemBase,System.Boolean)">
+            <summary>
+            Insert an edge into the database by referencing the source and target vertices just by their base properties (id, partitionKey, label).
+            This call uses the SQL API to insert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to insert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <remarks>Inserting the same edge twice with single:false will succeed and generate a new edge instance, while with single:true it will fail.</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.UpsertEdge``1(``0,CosmosDB.Net.Domain.GraphItemBase,CosmosDB.Net.Domain.GraphItemBase,System.Boolean)">
+            <summary>
+            Upsert an edge into the database by referencing the source and target vertices just by their base properties (id, partitionKey, label).
+            This call uses the SQL API to upsert the edge as a document.
+            </summary>
+            <param name="edge">Edge entity to upsert</param>
+            <param name="source">Source vertex of the edge</param>
+            <param name="target">Target vertex of the edge</param>
+            <param name="single">
+            [Optional] Indicates if there can only be one edge of this kind between the 2 vertices. Defaults to false.
+            i.e an edge defining a 'isFriend' relationship between 2 people needs to be singe:true because only one friend edge makes sense.
+            i.e an edge defining a 'visited' relationship between a person and a restaurant needs to be single:false because a person can visit the restaurant multiple times
+            </param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a CosmosSQLClient</exception>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.InsertEdges(System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.EdgeDefinition},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple edges into the database using a TPL Dataflow block.
+            This call uses the SQL API to insert the edges as a document.
+            </summary>
+            <param name="edges">Edges to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.UpsertEdges(System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.EdgeDefinition},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple edges into the database using a TPL Dataflow block.
+            This call uses the SQL API to upsert the edges as a document.
+            </summary>
+            <param name="edges">Edges to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <exception cref="T:System.InvalidOperationException">Throws invalid operation exception if the GraphClient was initialized without a <see cref="T:CosmosDB.Net.CosmosClientSql"/>.</exception>
+            <example>
+            <![CDATA[
+            await _client.UpsertVertex(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} vertices");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.ReadVertex``1(System.String,System.String)">
+            <summary>
+            Read a graph vertex using the SQL API. 
+            Forward the request to the SQL Client with a JObject type and then convert the resulting graphson document into our entity using the serialization helper.
+            </summary>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that encapsulates the result of the query and tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.ReadVertices``1(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Gets all documents of the given type from the collection.
+            </summary>
+            <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+            <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientGraph.ExecuteSQL``1(System.String,System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Execute a SQL statement against the graph database.
+            Forward the request to the SQL Client with a JObject type and then convert the resulting graphson documents into our entity using the serialization helper.
+            </summary>
+            <param name="query">Query to execute</param>
+            <param name="pagedResults">true to return only one page of the result set, false(Default) to return all results. </param>
+            <param name="continuationToken">token to pass into the query iterator to resume from a specific page. Should be present when using pageResults = true</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that encapsulates the result of the query and tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.InsertDocument``1(``0,System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}})">
+            <summary>
+            Insert a document into the database. 
+            The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+            If the type is decorated with attributes (<see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="T:CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+            then the values of those properties will be used.
+            If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+            If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+            If there are still no values at this point the following defaults will be used:
+             id -> new guid
+             label -> name fo type
+             partitionkey -> throw an exception.
+            </summary>
+            <param name="document">Entity to insert</param>
+            <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+            <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+            <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+            <remarks>The method will fail if a value cannot be found for partition key</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.InsertDocument(System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey)">
+            <summary>
+            Insert a document stream into the database.
+            </summary>
+            <param name="stream">Stream to insert</param>
+            <param name="partitionKey">PartitionKey to send</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.InsertDocuments``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple documents into the database using a TPL Dataflow block.
+            This method will attempt to automatically collect partitionKey / id information based on the <see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/> and <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/>
+            </summary>
+            <param name="documents">Documents to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <remarks>The method will fail if the type T is not annotated with the partitionKey and id</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.InsertDocuments(System.Collections.Generic.IEnumerable{System.ValueTuple{System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey}},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Insert multiple documents into the database using a TPL Dataflow block.
+            The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+            Each document passed in must contain a property that matches the partitionKey property assigned on the collection
+            </summary>
+            <param name="documents">Documents to insert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"inserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.UpsertDocument``1(``0,System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}},System.Linq.Expressions.Expression{System.Func{``0,System.Object}})">
+            <summary>
+            Upsert (Insert or Create) a document into the database.
+            The 3 main properties needed to properly insert a document (id, partitionkey and label) are going to be inferred as follows:
+            If the type is decorated with attributes (<see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/>,  <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/> or <see cref="T:CosmosDB.Net.Domain.Attributes.LabelAttribute"/>)
+            then the values of those properties will be used.
+            If attributes are not detected, the values from the properties specified as parameters of this method will be tried next.
+            If property expressions are not provided, the values of default properties will be tried next (id or whatever the PartitionKey property is set on the target collection). A label property will not be attempted.
+            If there are still no values at this point the following defaults will be used:
+             id -> new guid
+             label -> name fo type
+             partitionkey -> throw an exception.
+            </summary>
+            <param name="document">Entity to upsert</param>
+            <param name="pkProperty">Mandatory. Accessor func for the method to extraact partitionKey for your object.</param>
+            <param name="idProperty">Mandatory. Accessor func for the method to extract id for your object. Mandatory if your type T does not contain a property called id.</param>
+            <param name="labelProperty">Optional. Accessor func for the method to extract label for your object.</param>
+            <remarks>The method will fail if a value cannot be found for partition key</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.UpsertDocument(System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey)">
+            <summary>
+            Upsert (Insert or Create) a document stream into the database.
+            </summary>
+            <param name="stream">Stream to insert</param>
+            <param name="partitionKey">PartitionKey to send</param>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.UpsertDocuments``1(System.Collections.Generic.IEnumerable{``0},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple documents into the database using a TPL Dataflow block.
+            This method will attempt to automatically collect partitionKey / id information based on the <see cref="T:CosmosDB.Net.Domain.Attributes.PartitionKeyAttribute"/> and <see cref="T:CosmosDB.Net.Domain.Attributes.IdAttribute"/>
+            </summary>
+            <param name="documents">Documents to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <remarks>The method will fail if the type T is not annotated with the partitionKey and id</remarks>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.UpsertDocuments(System.Collections.Generic.IEnumerable{System.ValueTuple{System.IO.Stream,Microsoft.Azure.Cosmos.PartitionKey}},System.Action{System.Collections.Generic.IEnumerable{CosmosDB.Net.Domain.CosmosResponse}},System.Nullable{System.TimeSpan},System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Upsert (Insert or Update) multiple document streams into the database using a TPL Dataflow block.
+            The documents that are passed in are going to be added to the database using the Stream APIs so they will not be seriazlied / deseriazlied in the SDK
+            each document passed in must contain a property that matches the partitionKey property assigned on the collection
+            </summary>
+            <param name="documents">Documents to upsert</param>
+            <param name="reportingCallback">[Optional] Method to be called based on the <paramref name="reportingInterval"/>. Generally used to provide a progress update to callers. Defaults to null./></param>
+            <param name="reportingInterval">[Optional] interval in seconds to to call the reporting callback. Defaults to 10s</param>
+            <param name="threads">[Optional] Number of threads to use for the paralel execution. Defaults to 4</param>
+            <param name="cancellationToken">Cancellation token to cancel the operation</param>
+            <example>
+            <![CDATA[
+            await _client.InsertDocuments(elements, (partial) => { Console.WriteLine($"upserted {partial.Count()} documents");
+            ]]>
+            </example>
+            <returns><see cref="T:CosmosDB.Net.Domain.CosmosResponse"/> that tracks success status along with various performance parameters.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.ReadDocument``1(System.String,System.String)">
+            <summary>
+            Read a document by its Id and Partition Key. 
+            This is the fastest operation possible in a CosmosDB collection.
+            </summary>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.ReadDocuments``1(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Gets all documents of the given type from the collection.
+            </summary>
+            <param name="filter">Optional filter argument (i.e "budget &gt; 100000 and revenue &lt; 3000000".</param>
+            <param name="label">Type of document to retrieve. If empty, attempt to get value from the Attribute name or class name.</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="M:CosmosDB.Net.ICosmosClientSql.ExecuteSQL``1(System.String,System.Boolean,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Executes a SQL Query against the collection
+            </summary>
+            <param name="query">Query to execute</param>
+            <param name="pagedResults">true to return only one page of the result set, false(Default) to return all results. </param>
+            <param name="continuationToken">token to pass into the query iterator to resume from a specific page. Should be present when using <paramref name="pagedResults"/> = true</param>
+            <param name="cancellationToken">cancellatinToken used to cancel an operation in progress.</param>
+            <returns>Collection of results.</returns>
+        </member>
+        <member name="P:CosmosDB.Net.CreateOptions.ClientOptions">
+            <summary>
+            Get or set options for creating the Cosmos Client
+            </summary>
+        </member>
+    </members>
+</doc>

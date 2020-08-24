@@ -1,12 +1,18 @@
 ﻿using Microsoft.Azure.Cosmos;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace CosmosDB.Net
 {
     public class CreateOptions
     {
+        //Default client options Direct mode 1h timeout for backwards compatibility
+        public static CosmosClientOptions DefaultClientOptions = new CosmosClientOptions
+        {
+            ConnectionMode = ConnectionMode.Direct,
+            RequestTimeout = new TimeSpan(1, 0, 0),
+            AllowBulkExecution = false,
+        };
+
         public CreateOptions(string databaseId, string containerId, string partitionKeyPath = "/PartitionKey")
         {
             DatabaseId = databaseId;
@@ -15,9 +21,13 @@ namespace CosmosDB.Net
                 Id = containerId,
                 PartitionKeyPath = partitionKeyPath
             };
+            ClientOptions = DefaultClientOptions;
         }
 
-        public bool AllowBulkExecution { get; set; }
+        /// <summary>
+        /// Get or set options for creating the Cosmos Client
+        /// </summary>
+        public CosmosClientOptions ClientOptions { get; set; }
 
         public int? DatabaseThrouhput { get; set; }
 
